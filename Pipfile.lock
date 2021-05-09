@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "049904779daf1f73f39a0ea2998be292ad9779097933eac3b7b7b44f3f3da2d8"
+            "sha256": "88e934d86315284a4119dad4e3e4f47031236181ed146a6d07b854ac3a338981"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -73,6 +73,12 @@
                 "sha256:e3a62f0520172440ca0dcc823749319382e377f37f140a0b99ef45fecb84bfe7"
             ],
             "version": "==4.4.2"
+        },
+        "docopt": {
+            "hashes": [
+                "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"
+            ],
+            "version": "==0.6.2"
         },
         "google-api-core": {
             "extras": [
@@ -355,6 +361,14 @@
             ],
             "version": "==8.2.0"
         },
+        "pipreqs": {
+            "hashes": [
+                "sha256:9e351d644b28b98d7386b046a73806cbb3bb66b23a30e74feeb95ed9571db939",
+                "sha256:cafe42ab70628d408c147fb8944bc303355ea8f91fddca4a98d273e572e39905"
+            ],
+            "index": "pypi",
+            "version": "==0.4.10"
+        },
         "pokereval": {
             "hashes": [
                 "sha256:b85ab5cc10f9392da474b5538803ea1a89ff41a02c231f498497b3bba95f2e3a",
@@ -508,6 +522,13 @@
                 "sha256:e7b021f7241115872f92f43c6508082facffbd1c048e3c6e2bb9c2a157e28937"
             ],
             "version": "==1.26.4"
+        },
+        "yarg": {
+            "hashes": [
+                "sha256:4f9cebdc00fac946c9bf2783d634e538a71c7d280a4d806d45fd4dc0ef441492",
+                "sha256:55695bf4d1e3e7f756496c36a69ba32c40d18f821e38f61d028f6049e5e15911"
+            ],
+            "version": "==0.1.9"
         }
     },
     "develop": {}
