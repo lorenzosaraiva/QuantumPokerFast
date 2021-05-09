@@ -1,0 +1,40 @@
+<body>
+
+<form>
+	Table:<p id = "table_cards"></p> </br>
+	Pot: <p id = "pot"></p> </br> 
+	Active player is <p id = "active"></p> </br>
+	Player 0 has <p id = "p1stack"></p>chips  </br>
+	Player 1 has <p id = "p2stack"></p>chips  </br>
+	{% if player == 0 and finished == 0 %}
+		Your hand is ({{player0_card1}}) ({{player0_card2}}). 
+	{% elif player == 1 and finished == 0 %}
+		Your hand is ({{player1_card1}}) ({{player1_card2}}).
+	{% elif finished == 1 %}
+		Hand over! Player 0 has ({{player1_card0}}) ({{player1_card0}}) and Player 1 ({{player1_card1}}) ({{player1_card2}}).
+	{% else %}
+		<b>not allowed!</b>
+	{% endif %}
+</form>
+
+<button type="submit" value={{active_player}} onclick="check()" name='checkbtn'>Check</button>
+<button type="submit" value={{active_player}} onclick="location.href='{% url 'call' player %}'" name='callbtn'>Call</button>
+<button type="submit" value={{active_player}} onclick="location.href='{% url 'fold' player %}'" name='foldbtn'>Fold</button>
+<button type="submit" value={{active_player}} onclick="location.href='{% url 'quantum_draw1' player %}'" name='qd1btn'>Quantum Draw Card 1</button>
+<button type="submit" value={{active_player}} onclick="location.href='{% url 'quantum_draw2' player %}'" name='qd2btn'>Quantum Draw Card 2</button>
+
+
+<form class="forms-sample" name="form" action="{% url "raise_bet" player %}" method="post">
+	{% csrf_token %}
+	<label for="bet">Bet Size:</label>
+	<input type="number"  name="bet" value="" >
+    <button type="Submit" value="Submit" name="Submit" class="btn btn-default"> Raise </button> 
+</form>
+
+
+<textarea id="log" name="log" rows="10" cols="50">
+{{log}}</textarea>
+
+</body>
+
+<script src="main.js"></script>
