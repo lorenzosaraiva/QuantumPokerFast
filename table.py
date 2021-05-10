@@ -31,6 +31,7 @@ class Table():
 		self.finished = 0
 		self.pot = 0
 		self.to_pay = 0
+		self.showdown = 0
 
 
 	################# PLAYER ACTIONS ##################
@@ -95,12 +96,13 @@ class Table():
 			response = response + "has not enough to cover, so they went all in. NOT IMPLEMENTED YET."
 			return response
 
-	def fold(self, player_id):
+	def fold (self, player_id):
 		del self.players[player_id]
 		self.active_players = self.active_players - 1
 		if self.active_players == 1:
 			# acabou mão, player ganhou	
 			return self.finish_hand()
+		return "Player folded."
 
 	def quantum_draw1(self, player_id):
 		return self.quantum_draw(player_id, 0)
@@ -160,8 +162,10 @@ class Table():
 
 	def serialize(self):
 		new_table = copy.deepcopy(self)
-		new_table.players = [self.players[0].serialize(), self.players[1].serialize()]
-		new_table.all_players = [self.players[0].serialize(), self.players[1].serialize()]
+		for player in self.players:
+			new_player = player.serialize()
+			new_table.players.append(new_player)
+			new_table.all_players.append(new_player)	
 
 		return new_table
 
@@ -181,7 +185,10 @@ class Table():
 					
 		else:
 			winner = self.players[0]
-		ret = "Player " + str(player.number) + " has won " + str(self.pot) + " chips. Click on restart for another hand."
+		if self.showdown == 1:
+			ret = "Player " + str(player.number) + " has won " + str(self.pot) + " chips. Click on restart for another hand."
+		else:
+			ret = "Player " + str(self.players[0].number) + " has won."
 		winner.stack = winner.stack + self.pot
 		self.finished = 1
 		return ret
@@ -215,6 +222,7 @@ class Table():
 			return "Hand is not over yet!"
 		self.pot = 0
 		self.phase = 0
+		self.showdown = 0
 		self.current_player = 0
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
@@ -301,6 +309,7 @@ class Table():
 
 
 		if self.phase == 4:
+			showdown = 1
 			return self.finish_hand()
 
 		return ""

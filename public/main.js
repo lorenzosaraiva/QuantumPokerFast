@@ -1,9 +1,8 @@
 
-var url = "https://quantum-poker.herokuapp.com/"
+var url = "http://127.0.0.1:8000/"
 
 function draw_player(player) {
 
-    document.getElementById("p1stack").innerHTML = player.stack
     var card1 = "( "
     player.card1.forEach(card => {
         card1 = card1 + card.name
@@ -62,7 +61,7 @@ async function get_player() {
 }
 
 async function get_table() {
-    var table = await fetch("http://127.0.0.1:8000/table")
+    var table = await fetch(url + "table/")
     var json = await table.json()
     return json
 }
@@ -99,6 +98,12 @@ async function raise_bet() {
     await main()
 }
 
+async function fold() {
+    var id = new URL(window.location.href).searchParams.get("player")
+    console.log(await (await fetch(url + "fold/" + id)).text())
+    await main()
+}
+
 async function quantum_draw1() {
     var id = new URL(window.location.href).searchParams.get("player")
     console.log(await (await fetch(url + "quantum_draw1/" + id)).text())
@@ -115,9 +120,11 @@ async function quantum_draw2() {
 window.check = check
 window.call = call
 window.raise_bet = raise_bet
+window.fold = fold
 window.quantum_draw1 = quantum_draw1
 window.quantum_draw2 = quantum_draw2
 window.restart_hand = restart_hand
 
 main()
+setInterval(main, 1000)
 

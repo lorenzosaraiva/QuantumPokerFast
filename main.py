@@ -13,7 +13,7 @@ async def root():
 
 @app.get("/player/{player_id}")
 async def showplayer(player_id:int):
-    return table.players[player_id].serialize()
+    return table.all_players[player_id].serialize()
 
 @app.get("/table")
 async def showtable():
@@ -43,6 +43,6 @@ async def quantum_draw1(player_id:int):
 async def quantum_draw2(player_id:int):
     return table.quantum_draw2(player_id)
 
-@app.get("/restart_hand")
+@app.get("/restart_hand/")
 async def restart_hand(player_id:int):
     return table.restart_hand()

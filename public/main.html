@@ -2,18 +2,18 @@
 
 <form>
 	Table:<p id = "table_cards"></p> </br>
-	Pot: <p id = "pot"></p> </br> 
-	Active player is <p id = "active"></p> </br>
-	Player 0 has <p id = "p1stack"></p>chips  </br>
-	Player 1 has <p id = "p2stack"></p>chips  </br>
-	Your hand is <p id = "hand"></p>
+	Pot: <b id = "pot"></b> </br> 
+	Active player is <b id = "active"></b> </br>
+	Player 0 has <b id = "p1stack"></b> chips.  </br>
+	Player 1 has <b id = "p2stack"></b> chips.  </br>
+	Your hand is <b id = "hand"></b>
 	<p id = "end"></p>
 
 </form>
 
 <button type="submit" value={{active_player}} onclick="check()" name='checkbtn'>Check</button>
 <button type="submit" value={{active_player}} onclick="call()" name='callbtn'>Call</button>
-<button type="submit" value={{active_player}} onclick="fold()'" name='foldbtn'>Fold</button>
+<button type="submit" value={{active_player}} onclick="fold()" name='foldbtn'>Fold</button>
 <button type="submit" value={{active_player}} onclick="quantum_draw1()" name='qd1btn'>Quantum Draw Card 1</button>
 <button type="submit" value={{active_player}} onclick="quantum_draw2()" name='qd2btn'>Quantum Draw Card 2</button>
 <button type="submit" value={{active_player}} onclick="raise_bet()" name='raisebtn'>Raise</button>

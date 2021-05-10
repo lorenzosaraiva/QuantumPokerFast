@@ -14,33 +14,6 @@ class Player():
 		self.current_bet = 0
 		self.stack = 1000
 
-	def get_card1(self):
-		ret = ""
-		for card in self.card1:
-			ret = ret + str(card.name)
-		return ret
-
-	def get_card2(self):
-		ret = ""
-		for card in self.card2:
-			ret = ret + str(card.name)
-		return ret
-
-	def get_hand_string(self):
-		return "( " + self.get_card1_string + " ) " + "( "  + self.get_card2_string + " )"
-
-	def get_card1_string(self):
-		ret = ""
-		for card in self.card1:
-			ret = card + card.name
-		return ret
-
-	def get_card2_string(self):
-		ret = ""
-		for card in self.card1:
-			ret = card + card.name
-		return ret
-
 	def serialize(self):
 		new_player = copy.deepcopy(self)
 		new_player.circuit = []
