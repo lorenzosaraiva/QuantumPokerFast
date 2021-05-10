@@ -24,5 +24,20 @@ class Player():
 			ret = ret + str(card.name)
 		return ret
 
-	def to_JSON(self):
+	def get_hand_string(self):
+		return "( " + self.get_card1_string + " ) " + "( "  + self.get_card2_string + " )"
+
+	def get_card1_string(self):
+		ret = ""
+		for card in self.card1:
+			ret = card + card.name
+		return ret
+
+	def get_card2_string(self):
+		ret = ""
+		for card in self.card1:
+			ret = card + card.name
+		return ret
+
+	def to_json(self):
 		return self

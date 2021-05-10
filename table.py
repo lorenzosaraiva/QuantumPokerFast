@@ -31,7 +31,12 @@ class Table():
 		self.pot = 0
 		self.to_pay = 0
 
-	def check (self):
+
+	################# PLAYER ACTIONS ##################
+
+	def check (self, player_id):
+		if player_id != self.current_player:
+			return "Not your turn" 
 		player = self.players[self.current_player]
 		response = ""
 		if player.current_bet == self.to_pay:  # checa se player já cobriu aposta
@@ -48,12 +53,9 @@ class Table():
 		# exception > players não pagou a aposta. Na real essa checagem idealmente seria feita a cada começo
 		# de turno do player e desativaria o botão Check.
 
-	def next_player(self):
-		self.current_player = self.current_player + 1
-		if self.current_player == len(self.players):
-			self.current_player = 0
-
-	def raise_bet(self, amount):
+	def raise_bet(self, player_id, amount):
+		if player_id != self.current_player:
+			return "Not your turn" 
 		player = self.players[self.current_player]
 		total = amount + self.to_pay - player.current_bet 
 		if player.stack >= total:
@@ -62,13 +64,15 @@ class Table():
 			self.to_pay = amount + self.to_pay 
 			player.current_bet = self.to_pay
 			player.stack = player.stack - total
-			ret = "Player " + str(self.current_player) + "has raised to " + str(self.to_pay)
+			ret = "Player " + str(self.current_player) + " has raised to " + str(self.to_pay)
 			self.next_player()
 			return ret
 		else:
 			return "Not enough money"
 
-	def call(self):
+	def call(self, player_id):
+		if player_id != self.current_player:
+			return "Not your turn" 
 		if self.to_pay == 0:
 			return "Nothing to call, either check or raise."
 		player = self.players[self.current_player]
@@ -90,12 +94,69 @@ class Table():
 			response = response + "has not enough to cover, so they went all in. NOT IMPLEMENTED YET."
 			return response
 
-	def fold(self):
-		del self.players[self.current_player]
+	def fold(self, player_id):
+		del self.players[player_id]
 		self.active_players = self.active_players - 1
 		if self.active_players == 1:
 			# acabou mão, player ganhou	
 			return self.finish_hand()
+
+	def quantum_draw1(self, player_id):
+		return self.quantum_draw(player_id, 0)
+
+
+	def quantum_draw2(self, player_id):
+		return self.quantum_draw(player_id, 5)
+
+	def quantum_draw(self, player_id, offset):
+		# Caso o card esteja normal, transforma em qubit
+		if player_id != self.current_player:
+			return "Not your turn" 
+		player = self.get_active_player()
+		card = "Erro no card"
+		next_qubit = -1
+		if offset == 0:
+			card = player.card1
+			next_qubit = player.next_qubit1
+		elif offset == 5:
+			card = player.card2
+			next_qubit = player.next_qubit2
+
+		entangle = 0
+
+		if not entangle:
+			player.circuit.append(cirq.H(player.qubits[next_qubit + offset]))
+
+		new_cards = []
+		for i in range(len(card)):
+			card[i].binary_position = (self.to_bin(i, next_qubit + 1))
+
+		i = 0
+
+		for i in range(pow(2, next_qubit)):
+			new_card = self.draw_card()
+			new_card.binary_position = self.to_bin((len(card) + i), next_qubit + 1)
+			new_cards.append(new_card)
+
+		card = card + new_cards
+
+		if offset == 0:
+			player.next_qubit1 = player.next_qubit1 + 1
+		else:
+			player.next_qubit2 = player.next_qubit2 + 1
+
+		if offset == 0:
+			player.card1 = card
+		elif offset == 5:
+			player.card2 = card
+
+		response = "Player " + str(self.current_player) + " has quantum drawed."
+		return response
+
+
+
+	################### PLAYER ACTIONS END #####################
+
 
 	def finish_hand (self):
 		winner = ""
@@ -135,11 +196,16 @@ class Table():
 							" ", powers[i], suits_numbers[j])
 				deck.append(card)
 
-	#deck_id = str(uuid.uuid4())
 		return deck
 
+	def next_player(self):
+		self.current_player = self.current_player + 1
+		if self.current_player == len(self.players):
+			self.current_player = 0
 
 	def restart_hand(self):
+		if not self.finished:
+			return "Hand is not over yet!"
 		self.pot = 0
 		self.phase = 0
 		self.current_player = 0
@@ -152,6 +218,7 @@ class Table():
 			player.card1 = [self.draw_card()]
 			player.card2 = [self.draw_card()]
 		self.players = self.all_players[:]
+		return "New hand!"
 
 	def measure_players(self):
 		for player in self.players:
@@ -196,6 +263,9 @@ class Table():
 
 	def get_active_player (self):
 		return self.players[self.current_player]
+
+	def to_bin (self, x, n = 0):
+		return format(x, 'b').zfill(n)
 
 	def next_phase (self):
 		self.phase = self.phase + 1
