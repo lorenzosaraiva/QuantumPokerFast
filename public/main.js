@@ -1,5 +1,5 @@
 
-var url = "http://127.0.0.1:8000/"
+var url = "https://quantum-poker.herokuapp.com/"
 
 function draw_player(player) {
 
