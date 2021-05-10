@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import copy
 import cirq
 import math
 from cirq import Simulator
@@ -157,6 +158,12 @@ class Table():
 
 	################### PLAYER ACTIONS END #####################
 
+	def serialize(self):
+		new_table = copy.deepcopy(self)
+		new_table.players = [self.players[0].serialize(), self.players[1].serialize()]
+		new_table.all_players = [self.players[0].serialize(), self.players[1].serialize()]
+
+		return new_table
 
 	def finish_hand (self):
 		winner = ""
@@ -254,11 +261,11 @@ class Table():
 			if player.next_qubit2 > 0:
 				bits2 = bit[player.next_qubit1:]
 
-		if len(player.card1) > 1:
-			player.card1 = [player.card1.pop(int(bits1, 2))]
+			if len(player.card1) > 1:
+				player.card1 = [player.card1.pop(int(bits1, 2))]
 
-		if len(player.card2) > 1:
-			player.card2 = [player.card2.pop(int(bits2, 2))]
+			if len(player.card2) > 1:
+				player.card2 = [player.card2.pop(int(bits2, 2))]
 
 
 	def get_active_player (self):

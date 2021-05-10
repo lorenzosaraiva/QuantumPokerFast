@@ -1,3 +1,5 @@
+import copy
+
 class Player():
 	def __init__(self, card1, card2, qubits, number, circuit):
 		self.card1 = [card1]
@@ -39,5 +41,7 @@ class Player():
 			ret = card + card.name
 		return ret
 
-	def to_json(self):
-		return self
+	def serialize(self):
+		new_player = copy.deepcopy(self)
+		new_player.circuit = []
+		return new_player
