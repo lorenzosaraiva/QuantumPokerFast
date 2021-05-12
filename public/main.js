@@ -1,5 +1,5 @@
 
-var url = "https://quantum-poker.herokuapp.com/"
+var url = "http://quantum-poker.herokuapp.com/"
 
 function draw_player(player) {
 
