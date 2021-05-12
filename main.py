@@ -44,5 +44,5 @@ async def quantum_draw2(player_id:int):
     return table.quantum_draw2(player_id)
 
 @app.get("/restart_hand/")
-async def restart_hand(player_id:int):
+async def restart_hand():
     return table.restart_hand()

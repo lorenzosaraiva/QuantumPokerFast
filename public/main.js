@@ -16,6 +16,7 @@ function draw_player(player) {
     card2 = card2 + " )"
     
     document.getElementById("hand").innerHTML = card1 + card2
+    //document.getElementById("bet").prop('max', player.stack);
 
 }
 
@@ -28,7 +29,11 @@ function draw_table(table) {
     document.getElementById("active").innerHTML = table.current_player
     document.getElementById("pot").innerHTML = table.pot
 
-    if (table.finished == 1){
+    var id = new URL(window.location.href).searchParams.get("player")
+
+    document.getElementById("to_call").innerHTML = table.players_to_call[id]
+
+    if (table.finished == 1 && table.showdown == 1){
 
         var end = "Hand is over. "
         
@@ -47,10 +52,13 @@ function draw_table(table) {
         
         document.getElementById("end").innerHTML = end
 
+    }else{
+        end = " "
+        document.getElementById("end").innerHTML = end
     }
 
-    document.getElementById("p1stack").innerHTML = table.players[0].stack
-    document.getElementById("p2stack").innerHTML = table.players[1].stack
+    document.getElementById("p1stack").innerHTML = table.all_players[0].stack
+    document.getElementById("p2stack").innerHTML = table.all_players[1].stack
 
 }
 async function get_player() {
@@ -81,20 +89,23 @@ async function restart_hand() {
 
 async function check() {
     var id = new URL(window.location.href).searchParams.get("player")
-    console.log(await (await fetch(url + "check/" + id)).text())
+    var answer = await (await fetch(url + "check/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
     await main()
 }
 
 async function call() {
     var id = new URL(window.location.href).searchParams.get("player")
-    console.log(await (await fetch(url + "call/" + id)).text())
+    var answer = await (await fetch(url + "call/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
     await main()
 }
 
 async function raise_bet() {
     var bet = document.getElementById("bet").value
     var id = new URL(window.location.href).searchParams.get("player")
-    console.log(await (await fetch(url + "raise_bet/" + id + "/" + bet)).text())
+    var answer = await (await fetch(url + "raise_bet/" + id + "/" + bet)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
     await main()
 }
 

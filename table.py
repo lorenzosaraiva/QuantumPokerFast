@@ -32,6 +32,11 @@ class Table():
 		self.pot = 0
 		self.to_pay = 0
 		self.showdown = 0
+		self.small_blind = 10
+		self.big_blind = 20 
+		self.dealer = 0
+		self.players_to_call = [0, 0]
+		self.set_blinds()
 
 
 	################# PLAYER ACTIONS ##################
@@ -57,7 +62,10 @@ class Table():
 
 	def raise_bet(self, player_id, amount):
 		if player_id != self.current_player:
-			return "Not your turn" 
+			return "Not your turn"
+		if amount <= 0: 
+			return "Invalid value" 
+
 		player = self.players[self.current_player]
 		total = amount + self.to_pay - player.current_bet 
 		if player.stack >= total:
@@ -67,12 +75,19 @@ class Table():
 			player.current_bet = self.to_pay
 			player.stack = player.stack - total
 			ret = "Player " + str(self.current_player) + " has raised to " + str(self.to_pay)
-			self.next_player()
+
+			# atualiza o self.players_to_call - só tá funcionando pra 2 players
+			self.players_to_call[self.current_player] = 0
+			next_player = self.get_next_player_index(self.current_player)
+			self.players_to_call[next_player] = self.to_pay - self.players[next_player].current_bet
+			####
+
+			self.next_player()	
 			return ret
 		else:
 			return "Not enough money"
 
-	def call(self, player_id):
+	def call (self, player_id):
 		if player_id != self.current_player:
 			return "Not your turn" 
 		if self.to_pay == 0:
@@ -85,6 +100,7 @@ class Table():
 			player.stack = player.stack - total
 			player.current_bet = player.current_bet + self.to_pay
 			self.checked_players = self.checked_players + 1
+			self.players_to_call[self.current_player] = 0
 			if self.checked_players == self.active_players:  # acabou rodada de apostas
 				response = response + self.next_phase()
 			else:
@@ -99,10 +115,10 @@ class Table():
 	def fold (self, player_id):
 		del self.players[player_id]
 		self.active_players = self.active_players - 1
-		if self.active_players == 1:
+		if self.active_players <= 1:
 			# acabou mão, player ganhou	
 			return self.finish_hand()
-		return "Player folded."
+		return self.active_players
 
 	def quantum_draw1(self, player_id):
 		return self.quantum_draw(player_id, 0)
@@ -160,14 +176,25 @@ class Table():
 
 	################### PLAYER ACTIONS END #####################
 
-	def serialize(self):
+	def serialize (self):
 		new_table = copy.deepcopy(self)
-		for player in self.players:
+		new_table.players = []
+		new_table.all_players = []
+		for player in self.all_players:
 			new_player = player.serialize()
 			new_table.players.append(new_player)
 			new_table.all_players.append(new_player)	
 
 		return new_table
+
+	def get_call_amount(self, player_id):
+		ret = self.to_pay - self.players[player_id].current_bet
+		print(ret)
+		return ret
+
+	def set_blinds(self):
+		self.raise_bet(self.dealer, self.small_blind)
+		self.raise_bet(self.get_next_player_index(self.dealer), self.small_blind)
 
 	def finish_hand (self):
 		winner = ""
@@ -185,10 +212,10 @@ class Table():
 					
 		else:
 			winner = self.players[0]
-		if self.showdown == 1:
-			ret = "Player " + str(player.number) + " has won " + str(self.pot) + " chips. Click on restart for another hand."
-		else:
-			ret = "Player " + str(self.players[0].number) + " has won."
+		#if self.showdown == 1:
+		ret = "Player " + str(winner.number) + " has won " + str(self.pot) + " chips. Click on restart for another hand."
+		#else:
+			#ret = "Player " + str(self.players[0].number) + " has won."
 		winner.stack = winner.stack + self.pot
 		self.finished = 1
 		return ret
@@ -204,7 +231,7 @@ class Table():
 		suits_numbers = [1, 2, 3, 4]
 
 		deck = []
-		for i in range(len(numbers))	:
+		for i in range(len(numbers)):
 			for j in range(len(suits)):
 				card = _Card(str(numbers[i]) + suits[j] +
 							" ", powers[i], suits_numbers[j])
@@ -212,27 +239,35 @@ class Table():
 
 		return deck
 
-	def next_player(self):
+	def next_player (self):
 		self.current_player = self.current_player + 1
 		if self.current_player == len(self.players):
 			self.current_player = 0
+	
+	def get_next_player_index (self, index):
+		if index == len(self.players) - 1:
+			return 0
+		return index + 1
 
-	def restart_hand(self):
+	def restart_hand (self):
 		if not self.finished:
 			return "Hand is not over yet!"
 		self.pot = 0
 		self.phase = 0
 		self.showdown = 0
-		self.current_player = 0
+		self.finished = 0
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
 		self.to_pay = 0
 		self.players = []
+		self.cards = []
 		self.deck = self.build_deck()
 		for player in self.all_players:
-			player.card1 = [self.draw_card()]
-			player.card2 = [self.draw_card()]
+			player.reset_player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), cirq.Circuit())
 		self.players = self.all_players[:]
+		self.dealer = self.get_next_player_index(self.dealer)
+		self.current_player = self.dealer
+		self.set_blinds()
 		return "New hand!"
 
 	def measure_players(self):
@@ -309,7 +344,7 @@ class Table():
 
 
 		if self.phase == 4:
-			showdown = 1
+			self.showdown = 1
 			return self.finish_hand()
 
 		return ""
