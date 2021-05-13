@@ -14,12 +14,12 @@ async def root():
 
 @app.get("/player/{player_id}")
 async def showplayer(player_id:int):
-    return table.all_players[player_id]
+    return table.all_players[player_id].serialize()
 
 @app.get("/table")
 async def showtable():
-    return table
-    
+    return table.serialize()
+
 @app.get("/check/{player_id}")
 async def check(player_id:int):
     return table.check(player_id)
