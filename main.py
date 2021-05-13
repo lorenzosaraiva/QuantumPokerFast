@@ -11,7 +11,7 @@ table = Table()
 @app.get("/")
 async def root():
     return {"message": "Quantum poker"}
-
+    
 @app.get("/player/{player_id}")
 async def showplayer(player_id:int):
     return table.all_players[player_id].serialize()

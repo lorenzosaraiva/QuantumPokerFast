@@ -69,7 +69,7 @@ async function get_player() {
 }
 
 async function get_table() {
-    var table = await fetch(url + "table/")
+    var table = await fetch(url + "table")
     var json = await table.json()
     return json
 }
