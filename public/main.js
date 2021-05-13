@@ -1,5 +1,5 @@
 
-var url = "http://quantum-poker.herokuapp.com/"
+var url = "http://127.0.0.1:8000/"
 
 function draw_player(player) {
 
@@ -29,9 +29,7 @@ function draw_table(table) {
     document.getElementById("active").innerHTML = table.current_player
     document.getElementById("pot").innerHTML = table.pot
 
-    var id = new URL(window.location.href).searchParams.get("player")
 
-    document.getElementById("to_call").innerHTML = table.players_to_call[id]
 
     if (table.finished == 1 && table.showdown == 1){
 
@@ -59,7 +57,9 @@ function draw_table(table) {
 
     document.getElementById("p1stack").innerHTML = table.all_players[0].stack
     document.getElementById("p2stack").innerHTML = table.all_players[1].stack
+    var id = new URL(window.location.href).searchParams.get("player")
 
+    document.getElementById("to_call").innerHTML = table.players_to_call[id]
 }
 async function get_player() {
     var id = new URL(window.location.href).searchParams.get("player")
@@ -75,6 +75,7 @@ async function get_table() {
 }
 
 async function main() {
+    
     var player = await get_player()
     draw_player(player)
 
