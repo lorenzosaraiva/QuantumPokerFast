@@ -44,6 +44,22 @@ async def quantum_draw1(player_id:int):
 async def quantum_draw2(player_id:int):
     return table.quantum_draw2(player_id)
 
+@app.get("/entangle1/{player_id}")
+async def entangle1(player_id:int):
+    return table.entangle_same_card1(player_id)
+
+@app.get("/entangle2/{player_id}")
+async def entangle2(player_id:int):
+    return table.entangle_same_card2(player_id)
+
+@app.get("/entangle_diff_1_2/{player_id}")
+async def entangle_diff_1_2(player_id:int):
+    return table.entangle_diff_1_2(player_id)
+
+@app.get("/entangle_diff_2_1/{player_id}")
+async def entangle_diff_2_1(player_id:int):
+    return table.entangle_diff_2_1(player_id)
+
 @app.get("/restart_hand/")
 async def restart_hand():
     return table.restart_hand()

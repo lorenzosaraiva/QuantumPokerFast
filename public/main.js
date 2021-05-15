@@ -1,21 +1,80 @@
 
-var url = "https://quantum-poker.herokuapp.com/"
+//var url = "https://quantum-poker.herokuapp.com/"
+var url = "http://127.0.0.1:8000/"
 
 function draw_player(player) {
-
-    var card1 = "( "
-    player.card1.forEach(card => {
-        card1 = card1 + card.name
-    });
-    card1 = card1 + " )"
-
-    var card2 = "( "
-    player.card2.forEach(card => {
-        card2 = card2 + card.name
-    });
-    card2 = card2 + " )"
     
-    document.getElementById("hand").innerHTML = card1 + card2
+    var i = 0
+    if (player.diff_ent == 0){
+        var card1 = "( "
+        player.card1_active.forEach(card => {
+            if (i < player.card1_active.length - 1){
+                card1 = card1 + card.name  + " " + card.binary_position + "/ "
+                i = i + 1
+            }
+            else{
+                card1 = card1 + card.name  + " " + card.binary_position
+                i = i + 1
+            }
+        });
+        card1 = card1 + " )"
+
+        i = 0
+        var card2 = "( "
+        
+        player.card2_active.forEach(card => {
+            if (i < player.card2_active.length - 1){
+                card2 = card2 + card.name  + " " + card.binary_position + "/ "
+                i = i + 1
+            }
+            else{
+                card2 = card2 + card.name  + " " + card.binary_position
+                i = i + 1
+            }
+        });
+        card2 = card2 + " )"
+        
+        document.getElementById("hand").innerHTML = card1 + card2
+    }else{
+        var hand1 = "["
+        player.card1_active.forEach(hand => {
+            hand1 = hand1 + " ( "
+            hand.forEach(card => {
+                if (i < hand.length - 1){
+                    hand1 = hand1 + card.name  + " " + card.binary_position + "/ "
+                    i = i + 1
+                }
+                else{
+                    hand1 = hand1 + card.name  + " " + card.binary_position
+                    i = i + 1
+                }
+            });
+            hand1 = hand1 + " ) "
+            i = 0
+        });
+        hand1 = hand1 + " ] "
+
+        var hand2 = " [ "
+        var j = 0
+        player.card2_active.forEach(hand => {
+            hand2 = hand2 + " ( "
+            hand.forEach(card => {
+                if (j < hand.length - 1){
+                    hand2 = hand2 + card.name  + " " + card.binary_position + "/ "
+                    j = j + 1
+                }
+                else{
+                    hand2 = hand2 + card.name  + " " + card.binary_position
+                    j = j + 1
+                }
+            });
+            hand2 = hand2 + " ) "
+            j = 0
+        });
+        hand2 = hand2 + " ] "
+        document.getElementById("hand").innerHTML = hand1 + hand2
+
+    }
     //document.getElementById("bet").prop('max', player.stack);
 
 }
@@ -125,6 +184,34 @@ async function quantum_draw1() {
 async function quantum_draw2() {
     var id = new URL(window.location.href).searchParams.get("player")
     console.log(await (await fetch(url + "quantum_draw2/" + id)).text())
+    await main()
+}
+
+async function entangle1() {
+    var id = new URL(window.location.href).searchParams.get("player")
+    var answer = await (await fetch(url + "entangle1/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
+    await main()
+}
+
+async function entangle2() {
+    var id = new URL(window.location.href).searchParams.get("player")
+    var answer = await (await fetch(url + "entangle2/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
+    await main()
+}
+
+async function entangle_diff_1_2() {
+    var id = new URL(window.location.href).searchParams.get("player")
+    var answer = await (await fetch(url + "entangle_diff_1_2/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
+    await main()
+}
+
+async function entangle_diff_2_1() {
+    var id = new URL(window.location.href).searchParams.get("player")
+    var answer = await (await fetch(url + "entangle_diff_2_1/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
     await main()
 }
 

@@ -120,14 +120,14 @@ class Table():
 			return self.finish_hand()
 		return self.active_players
 
-	def quantum_draw1(self, player_id):
-		return self.quantum_draw(player_id, 0)
+	def quantum_draw1 (self, player_id):
+		return self.quantum_draw(player_id, 0, False)
 
 
-	def quantum_draw2(self, player_id):
-		return self.quantum_draw(player_id, 5)
+	def quantum_draw2 (self, player_id):
+		return self.quantum_draw(player_id, 5, False)
 
-	def quantum_draw(self, player_id, offset):
+	def quantum_draw (self, player_id, offset, entangle):
 		# Caso o card esteja normal, transforma em qubit
 		if player_id != self.current_player:
 			return "Not your turn" 
@@ -140,8 +140,9 @@ class Table():
 		elif offset == 5:
 			card = player.card2
 			next_qubit = player.next_qubit2
-
-		entangle = 0
+		
+		if next_qubit >= 5:
+			return "All qubits already used"
 
 		if not entangle:
 			player.circuit.append(cirq.H(player.qubits[next_qubit + offset]))
@@ -169,10 +170,99 @@ class Table():
 		elif offset == 5:
 			player.card2 = card
 
+		self.update_player_post_entangle(player)
 		response = "Player " + str(self.current_player) + " has quantum drawed."
 		return response
 
+	def entangle_same_card1 (self, player_id):
+		self.entangle_same_card(player_id, 0)
 
+	def entangle_same_card2 (self, player_id):
+		self.entangle_same_card(player_id, 5)
+
+
+	def entangle_same_card (self, player_id, offset):
+		if player_id != self.current_player:
+			return "Not your turn"
+		player = self.players[self.current_player]
+		ret = ""
+		if offset == 0:
+			next_qubit = player.next_qubit1
+		else:
+			next_qubit = player.next_qubit2
+
+		if next_qubit == 0: # Tentou fazer o entangle de um card sem qubit ativado
+			ret = "You don't have any active qubits in this card! Quantum draw first."
+			return ret
+
+		if next_qubit >= 5:
+			ret = "All qubits already used."
+			return ret
+		
+		origin = next_qubit - 1
+		player.circuit.append(cirq.CNOT(player.qubits[origin  + offset], player.qubits[next_qubit + offset]))
+		self.quantum_draw(player_id, offset, True)
+
+		#player.entangled.append(['c'+ str('1') + 'q' + str(origin), 'c' + str('1') + 'q' + str(next_qubit)])
+		if offset == 0:
+			player.entangled1.append([origin, next_qubit])
+		else:
+			player.entangled2.append([origin, next_qubit])
+
+		self.update_player_post_entangle(player)
+		return ""
+	
+	def entangle_diff_1_2 (self, player_id):
+		if player_id != self.current_player:
+			return "Not your turn"
+		player = self.players[self.current_player]
+
+		ret = ""
+		
+		origin = player.next_qubit1 - 1
+		target = player.next_qubit2
+
+		if origin < 0: # Tentou fazer o entangle de um card sem qubit ativado
+			ret = "You don't have any active qubits in the origin card! Quantum draw first."
+			return ret
+
+		if target >= 5:
+			ret = "All qubits already used."
+			return ret
+
+		player.diff_ent_index.append([origin, target])
+		player.circuit.append(cirq.CNOT(player.qubits[origin], player.qubits[target + 5]))
+		self.quantum_draw(player_id, 5, True)
+
+		player.diff_ent = 1
+		self.update_player_post_entangle(player)
+		return ""
+
+	def entangle_diff_2_1 (self, player_id):
+		if player_id != self.current_player:
+			return "Not your turn"
+		player = self.players[self.current_player]
+
+		ret = ""
+		
+		origin = player.next_qubit2 - 1
+		target = player.next_qubit1
+
+		if origin < 0: # Tentou fazer o entangle de um card sem qubit ativado
+			ret = "You don't have any active qubits in the origin card! Quantum draw first."
+			return ret
+
+		if target >= 5:
+			ret = "All qubits already used."
+			return ret
+
+		player.circuit.append(cirq.CNOT(player.qubits[origin + 5], player.qubits[target]))
+		self.quantum_draw(player_id, 0, True)
+
+		player.diff_ent = 1
+		player.diff_ent_index.append([target, origin])
+		self.update_player_post_entangle(player)
+		return ""
 
 	################### PLAYER ACTIONS END #####################
 
@@ -186,6 +276,63 @@ class Table():
 			new_table.all_players.append(new_player)	
 
 		return new_table
+
+	def update_player_post_entangle(self, player):
+		to_remove = []
+		for i in range(len(player.card1)):
+			binary = self.to_bin(i, player.next_qubit1)
+			#print(binary)
+			for pair in player.entangled1:
+				if binary[pair[0]] != binary[pair[1]]:
+					to_remove.append(i)
+
+
+		to_remove = list(dict.fromkeys(to_remove))
+		temp_list = player.card1[:]
+		for index in sorted(to_remove, reverse=True):
+			del temp_list[index]
+
+		player.card1_active = temp_list
+
+		
+		to_remove = []
+		for i in range(len(player.card2)):
+			binary = self.to_bin(i, player.next_qubit2)
+			for pair in player.entangled2:
+				if binary[pair[0]] != binary[pair[1]]:
+					to_remove.append(i)
+
+
+		to_remove = list(dict.fromkeys(to_remove))
+		temp_list = player.card2[:]
+		for index in sorted(to_remove, reverse=True):
+			del temp_list[index]
+		
+		player.card2_active = temp_list
+
+		hand1 = [[],[]]
+		hand2 = [[],[]]
+		if player.diff_ent == 1:
+			for i in range(len(player.card1_active)):
+				binary = player.card1_active[i].binary_position
+				for pair in player.diff_ent_index:
+					if binary[pair[0]] == '0':
+						hand1[0].append(player.card1_active[i])
+					else:
+						hand2[0].append(player.card1_active[i])
+
+			for i in range(len(player.card2_active)):
+				binary = player.card2_active[i].binary_position
+				print(binary)
+				for pair in player.diff_ent_index:
+					if binary[pair[1]] == '0':
+						hand1[1].append(player.card2_active[i])
+					else:
+						hand2[1].append(player.card2_active[i])
+
+			player.card1_active = hand1
+			player.card2_active = hand2	
+
 
 	def get_call_amount(self, player_id):
 		ret = self.to_pay - self.players[player_id].current_bet
