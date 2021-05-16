@@ -121,10 +121,14 @@ class Table():
 		return self.active_players
 
 	def quantum_draw1 (self, player_id):
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
 		return self.quantum_draw(player_id, 0, False)
 
 
 	def quantum_draw2 (self, player_id):
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
 		return self.quantum_draw(player_id, 5, False)
 
 	def quantum_draw (self, player_id, offset, entangle):
@@ -175,9 +179,13 @@ class Table():
 		return response
 
 	def entangle_same_card1 (self, player_id):
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
 		self.entangle_same_card(player_id, 0)
 
 	def entangle_same_card2 (self, player_id):
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
 		self.entangle_same_card(player_id, 5)
 
 
@@ -213,6 +221,8 @@ class Table():
 		return ""
 	
 	def entangle_diff_1_2 (self, player_id):
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
 		if player_id != self.current_player:
 			return "Not your turn"
 		player = self.players[self.current_player]
@@ -239,6 +249,8 @@ class Table():
 		return ""
 
 	def entangle_diff_2_1 (self, player_id):
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
 		if player_id != self.current_player:
 			return "Not your turn"
 		player = self.players[self.current_player]
@@ -277,11 +289,12 @@ class Table():
 
 		return new_table
 
-	def update_player_post_entangle(self, player):
+	def update_player_post_entangle (self, player):
+		#self.quantum_action_used = 1
+
 		to_remove = []
 		for i in range(len(player.card1)):
 			binary = self.to_bin(i, player.next_qubit1)
-			#print(binary)
 			for pair in player.entangled1:
 				if binary[pair[0]] != binary[pair[1]]:
 					to_remove.append(i)
@@ -323,7 +336,6 @@ class Table():
 
 			for i in range(len(player.card2_active)):
 				binary = player.card2_active[i].binary_position
-				print(binary)
 				for pair in player.diff_ent_index:
 					if binary[pair[1]] == '0':
 						hand1[1].append(player.card2_active[i])
@@ -336,7 +348,6 @@ class Table():
 
 	def get_call_amount(self, player_id):
 		ret = self.to_pay - self.players[player_id].current_bet
-		print(ret)
 		return ret
 
 	def set_blinds(self):
@@ -388,6 +399,7 @@ class Table():
 
 	def next_player (self):
 		self.current_player = self.current_player + 1
+		self.quantum_action_used = 0
 		if self.current_player == len(self.players):
 			self.current_player = 0
 	
@@ -414,6 +426,7 @@ class Table():
 		self.players = self.all_players[:]
 		self.dealer = self.get_next_player_index(self.dealer)
 		self.current_player = self.dealer
+		self.quantum_action_used = 0 
 		self.set_blinds()
 		return "New hand!"
 
@@ -469,6 +482,7 @@ class Table():
 		self.checked_players = 0
 		self.to_pay = 0
 		self.current_player = 0
+		self.quantum_action_used = 0
 
 		for player in self.players:
 			player.current_bet = 0

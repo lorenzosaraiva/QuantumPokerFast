@@ -30,6 +30,8 @@ class Player():
 		self.circuit = circuit
 		self.entangled1 = []
 		self.entangled2 = []
+		self.diff_ent = 0
+		self.diff_ent_index = []
 		self.next_entangle = 0
 		self.current_bet = 0
 
