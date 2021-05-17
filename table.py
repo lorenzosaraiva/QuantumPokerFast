@@ -11,7 +11,7 @@ from player import Player
 
 
 class Table():
-	def __init__(self):
+	def __init__(self, num_players):
 		self.flop1 = "Error"
 		self.flop2 = "Error"
 		self.flop3 = "Error"
@@ -19,9 +19,10 @@ class Table():
 		self.river = "Error"
 		self.cards = []
 		self.deck = self.build_deck()
-		player1 = Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), 1, cirq.Circuit())
-		player2 = Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), 2, cirq.Circuit())
-		self.all_players = [player1, player2]
+		self.all_players = []
+		self.max_qubits = 5
+		for i in range(num_players):
+			self.all_players.append(Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), i, cirq.Circuit()))		
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
 		self.players = self.all_players[:]
@@ -35,7 +36,9 @@ class Table():
 		self.small_blind = 10
 		self.big_blind = 20 
 		self.dealer = 0
-		self.players_to_call = [0, 0]
+		self.players_to_call = []
+		for i in range(num_players):
+			self.players_to_call.append(0)
 		self.set_blinds()
 
 
@@ -60,8 +63,8 @@ class Table():
 		# exception > players não pagou a aposta. Na real essa checagem idealmente seria feita a cada começo
 		# de turno do player e desativaria o botão Check.
 
-	def raise_bet(self, player_id, amount):
-		if player_id != self.current_player:
+	def raise_bet(self, player_id, amount, is_blind = 0):
+		if player_id != self.current_player and is_blind == 0:
 			return "Not your turn"
 		if amount <= 0: 
 			return "Invalid value" 
@@ -346,13 +349,15 @@ class Table():
 			player.card2_active = hand2	
 
 
-	def get_call_amount(self, player_id):
+	def get_call_amount (self, player_id):
 		ret = self.to_pay - self.players[player_id].current_bet
 		return ret
 
-	def set_blinds(self):
-		self.raise_bet(self.dealer, self.small_blind)
-		self.raise_bet(self.get_next_player_index(self.dealer), self.small_blind)
+	def set_blinds (self):
+		small = self.get_next_player_index(self.dealer)
+		big = self.get_next_player_index(small)
+		self.raise_bet(small, self.small_blind, 1)
+		self.raise_bet(big, self.small_blind, 1)
 
 	def finish_hand (self):
 		winner = ""
