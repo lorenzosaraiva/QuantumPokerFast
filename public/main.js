@@ -1,7 +1,7 @@
 
-//var url = "https://quantum-poker.herokuapp.com/"
-var url = "http://127.0.0.1:8000/"
-
+var url = "https://quantum-poker.herokuapp.com/"
+//var url = "http://127.0.0.1:8000/"
+var is_first = 1 // gambiarra
 function draw_player(player) {
     
     var i = 0
@@ -87,26 +87,29 @@ function draw_table(table) {
     document.getElementById("table_cards").innerHTML = cards_name
     document.getElementById("active").innerHTML = table.current_player
     document.getElementById("pot").innerHTML = table.pot
+    document.getElementById("dealer").innerHTML = table.dealer
 
 
 
-    if (table.finished == 1 && table.showdown == 1){
+
+    if (table.finished == 1){
 
         var end = "Hand is over. "
-        
-        table.players.forEach(player => {
-            end = end + " Player " + player.number + " had ("
-            player.card1.forEach(card => {
-                end = end + card.name
+        if (table.showdown == 1){
+            table.all_players.forEach(player => {
+                end = end + " Player " + player.number + " had ("
+                player.card1.forEach(card => {
+                    end = end + card.name
+                });
+                end = end + " ) ("
+            
+                player.card2.forEach(card => {
+                    end = end + card.name
+                });
+                end = end + " )"
             });
-            end = end + " ) ("
-        
-            player.card2.forEach(card => {
-                end = end + card.name
-            });
-            end = end + " )"
-        });
-        
+        }
+
         document.getElementById("end").innerHTML = end
 
     }else{
@@ -114,8 +117,33 @@ function draw_table(table) {
         document.getElementById("end").innerHTML = end
     }
 
+    /*
+    var i = 0
+    if (is_first == 1){
+        table.all_players.forEach(player => {
+            var body = document.createElement("b")
+            var div = document.getElementById("players_div")
+            var linebreak = document.createElement("br")
+            var message = "Player " + i + " has " + player.stack + " chips."
+           if (player.is_allin == 1){
+                message = message + " This player is all in."
+            }
+            if (player.is_folded == 1){
+                message = message + " This player is folded."
+            }
+            div.appendChild(body) 
+            div.appendChild(linebreak)
+            body.innerHTML = message
+
+            i = i + 1
+        });
+        is_first = 0
+    }
+    */
     document.getElementById("p1stack").innerHTML = table.all_players[0].stack
     document.getElementById("p2stack").innerHTML = table.all_players[1].stack
+    //document.getElementById("p3stack").innerHTML = table.all_players[2].stack
+
     var id = new URL(window.location.href).searchParams.get("player")
 
     document.getElementById("to_call").innerHTML = table.players_to_call[id]

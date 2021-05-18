@@ -25,8 +25,6 @@ class Table():
 			self.all_players.append(Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), i, cirq.Circuit()))		
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
-		self.players = self.all_players[:]
-		self.current_player = 0
 		# 0 - pre-flop, 1 - flop, 2 - turn, 3 - river.
 		self.phase = 0
 		self.finished = 0
@@ -36,6 +34,8 @@ class Table():
 		self.small_blind = 10
 		self.big_blind = 20 
 		self.dealer = 0
+		self.players_allin = 0
+		self.current_player = self.get_next_player_index(self.dealer)
 		self.players_to_call = []
 		for i in range(num_players):
 			self.players_to_call.append(0)
@@ -47,7 +47,7 @@ class Table():
 	def check (self, player_id):
 		if player_id != self.current_player:
 			return "Not your turn" 
-		player = self.players[self.current_player]
+		player = self.all_players[self.current_player]
 		response = ""
 		if player.current_bet == self.to_pay:  # checa se player já cobriu aposta
 			self.checked_players = self.checked_players + 1
@@ -63,13 +63,13 @@ class Table():
 		# exception > players não pagou a aposta. Na real essa checagem idealmente seria feita a cada começo
 		# de turno do player e desativaria o botão Check.
 
-	def raise_bet(self, player_id, amount, is_blind = 0):
-		if player_id != self.current_player and is_blind == 0:
+	def raise_bet (self, player_id, amount):
+		if player_id != self.current_player:
 			return "Not your turn"
 		if amount <= 0: 
 			return "Invalid value" 
 
-		player = self.players[self.current_player]
+		player = self.all_players[self.current_player]
 		total = amount + self.to_pay - player.current_bet 
 		if player.stack >= total:
 			self.pot = self.pot + total
@@ -79,11 +79,13 @@ class Table():
 			player.stack = player.stack - total
 			ret = "Player " + str(self.current_player) + " has raised to " + str(self.to_pay)
 
-			# atualiza o self.players_to_call - só tá funcionando pra 2 players
-			self.players_to_call[self.current_player] = 0
-			next_player = self.get_next_player_index(self.current_player)
-			self.players_to_call[next_player] = self.to_pay - self.players[next_player].current_bet
-			####
+			i = 0
+			for player in self.all_players:
+				if player.is_folded == 1 or player.is_allin == 1:
+					self.players_to_call[i] = 0
+				else:
+					self.players_to_call[i] = self.to_pay - player.current_bet
+				i += 1
 
 			self.next_player()	
 			return ret
@@ -95,13 +97,13 @@ class Table():
 			return "Not your turn" 
 		if self.to_pay == 0:
 			return "Nothing to call, either check or raise."
-		player = self.players[self.current_player]
+		player = self.all_players[self.current_player]
 		response = "Player " + str(self.current_player) + " "
 		total = self.to_pay - player.current_bet
 		if player.stack >= total:
 			self.pot = self.pot + total
 			player.stack = player.stack - total
-			player.current_bet = player.current_bet + self.to_pay
+			player.current_bet = self.to_pay
 			self.checked_players = self.checked_players + 1
 			self.players_to_call[self.current_player] = 0
 			if self.checked_players == self.active_players:  # acabou rodada de apostas
@@ -112,16 +114,31 @@ class Table():
 				str(self.to_pay) + " chips."
 			return response
 		else:
-			response = response + "has not enough to cover, so they went all in. NOT IMPLEMENTED YET."
+			player.is_allin = 1
+			self.pot = self.pot + player.stack
+			player.stack = 0
+			self.active_players = self.active_players - 1
+			self.players_allin = self.players_allin + 1
+			if self.checked_players == self.active_players: 
+				response = response + self.next_phase()
+			else:
+				self.next_player()
+			response = response + "You had not enough chips to cover the bet, so you went all in."
 			return response
 
 	def fold (self, player_id):
-		del self.players[player_id]
+		if player_id != self.current_player:
+			return "Not your turn" 
+		player = self.all_players[player_id]
+		player.is_folded = 1
 		self.active_players = self.active_players - 1
-		if self.active_players <= 1:
-			# acabou mão, player ganhou	
+		if self.active_players == 1:
 			return self.finish_hand()
-		return self.active_players
+		else:
+			if self.checked_players == self.active_players:  # acabou rodada de apostas
+				self.next_phase()
+			else:
+				self.next_player()
 
 	def quantum_draw1 (self, player_id):
 		if self.quantum_action_used == 1:
@@ -144,7 +161,7 @@ class Table():
 		if offset == 0:
 			card = player.card1
 			next_qubit = player.next_qubit1
-		elif offset == 5:
+		else:
 			card = player.card2
 			next_qubit = player.next_qubit2
 		
@@ -174,7 +191,7 @@ class Table():
 
 		if offset == 0:
 			player.card1 = card
-		elif offset == 5:
+		else:
 			player.card2 = card
 
 		self.update_player_post_entangle(player)
@@ -189,13 +206,13 @@ class Table():
 	def entangle_same_card2 (self, player_id):
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
-		self.entangle_same_card(player_id, 5)
+		self.entangle_same_card(player_id, self.max_qubits)
 
 
 	def entangle_same_card (self, player_id, offset):
 		if player_id != self.current_player:
 			return "Not your turn"
-		player = self.players[self.current_player]
+		player = self.all_players[self.current_player]
 		ret = ""
 		if offset == 0:
 			next_qubit = player.next_qubit1
@@ -228,7 +245,7 @@ class Table():
 			return "Quantum Action already used this turn."
 		if player_id != self.current_player:
 			return "Not your turn"
-		player = self.players[self.current_player]
+		player = self.all_players[self.current_player]
 
 		ret = ""
 		
@@ -256,7 +273,7 @@ class Table():
 			return "Quantum Action already used this turn."
 		if player_id != self.current_player:
 			return "Not your turn"
-		player = self.players[self.current_player]
+		player = self.all_players[self.current_player]
 
 		ret = ""
 		
@@ -350,35 +367,37 @@ class Table():
 
 
 	def get_call_amount (self, player_id):
-		ret = self.to_pay - self.players[player_id].current_bet
+		ret = self.to_pay - self.all_players[player_id].current_bet
 		return ret
 
 	def set_blinds (self):
 		small = self.get_next_player_index(self.dealer)
 		big = self.get_next_player_index(small)
-		self.raise_bet(small, self.small_blind, 1)
-		self.raise_bet(big, self.small_blind, 1)
+		self.raise_bet(small, self.small_blind)
+		self.raise_bet(big, self.small_blind)
+		self.checked_players = 0
 
 	def finish_hand (self):
-		winner = ""
-		ret = ""
-		if self.active_players > 1:
+		
+		if self.active_players == 1 and self.players_allin == 0:
+			for player in self.all_players:
+				if player.is_folded == 0:
+					winner = player					
+		else:
 			self.compute_players()
 			score = 0
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
-			for player in self.players:
+			for player in self.all_players:
+				if player.is_folded == 1:
+					continue
 				hole = [Card(player.card1[0].power, player.card1[0].suit), Card(player.card2[0].power, player.card2[0].suit)]
 				new_score = HandEvaluator.evaluate_hand(hole, board)
 				if new_score > score:
 					score = new_score
 					winner = player
-					
-		else:
-			winner = self.players[0]
-		#if self.showdown == 1:
+
 		ret = "Player " + str(winner.number) + " has won " + str(self.pot) + " chips. Click on restart for another hand."
-		#else:
-			#ret = "Player " + str(self.players[0].number) + " has won."
+
 		winner.stack = winner.stack + self.pot
 		self.finished = 1
 		return ret
@@ -405,11 +424,15 @@ class Table():
 	def next_player (self):
 		self.current_player = self.current_player + 1
 		self.quantum_action_used = 0
-		if self.current_player == len(self.players):
+		if self.current_player == len(self.all_players):
 			self.current_player = 0
+		player = self.all_players[self.current_player]
+		if player.is_allin == 1 or player.is_folded == 1:
+			self.next_player()
+		
 	
 	def get_next_player_index (self, index):
-		if index == len(self.players) - 1:
+		if index == len(self.all_players) - 1:
 			return 0
 		return index + 1
 
@@ -422,21 +445,22 @@ class Table():
 		self.finished = 0
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
+		self.players_allin = 0
 		self.to_pay = 0
-		self.players = []
 		self.cards = []
 		self.deck = self.build_deck()
 		for player in self.all_players:
 			player.reset_player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), cirq.Circuit())
-		self.players = self.all_players[:]
 		self.dealer = self.get_next_player_index(self.dealer)
-		self.current_player = self.dealer
+		self.current_player = self.get_next_player_index(self.dealer)
 		self.quantum_action_used = 0 
 		self.set_blinds()
 		return "New hand!"
 
-	def measure_players(self):
-		for player in self.players:
+	def measure_players (self):
+		for player in self.all_players:
+			if player.is_folded == 1:
+				continue
 			for i in range(player.next_qubit1):
 				player.circuit.append(cirq.measure(player.qubits[i]))
 
@@ -452,7 +476,9 @@ class Table():
 		
 		self.measure_players()
 		simulator = Simulator()
-		for player in self.players:
+		for player in self.all_players:
+			if player.is_folded == 1:
+				continue
 			result = ''
 			if player.next_qubit1 != 0 or player.next_qubit2 != 0:
 				result = simulator.run(player.circuit)
@@ -477,7 +503,7 @@ class Table():
 
 
 	def get_active_player (self):
-		return self.players[self.current_player]
+		return self.all_players[self.current_player]
 
 	def to_bin (self, x, n = 0):
 		return format(x, 'b').zfill(n)
@@ -486,10 +512,14 @@ class Table():
 		self.phase = self.phase + 1
 		self.checked_players = 0
 		self.to_pay = 0
-		self.current_player = 0
+		self.current_player = self.dealer
+		player =self.all_players[self.dealer]
+		if player.is_allin == 1 or player.is_folded:
+			self.next_player()
+
 		self.quantum_action_used = 0
 
-		for player in self.players:
+		for player in self.all_players:
 			player.current_bet = 0
 
 		if self.phase == 1:

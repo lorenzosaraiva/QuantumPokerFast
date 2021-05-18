@@ -17,7 +17,9 @@ class Player():
 		self.diff_ent_index = []
 		self.next_entangle = 0
 		self.current_bet = 0
+		self.is_allin = 0
 		self.stack = 1000
+		self.is_folded = 0
 
 	def reset_player(self, card1, card2, qubits, circuit):
 		self.card1 = [card1]
@@ -34,6 +36,9 @@ class Player():
 		self.diff_ent_index = []
 		self.next_entangle = 0
 		self.current_bet = 0
+		self.is_allin = 0
+		self.is_folded = 0
+
 
 	def serialize(self):
 		new_player = copy.deepcopy(self)

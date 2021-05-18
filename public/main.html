@@ -1,16 +1,19 @@
 <body>
 
-<form>
+<div id = "table_div">
 	Table:<p id = "table_cards"></p> </br>
 	Pot: <b id = "pot"></b> </br> 
+	Dealer: <b id = "dealer"></b> </br> 
 	Active player is <b id = "active"></b> </br>
-	Player 0 has <b id = "p1stack"></b> chips.  </br>
-	Player 1 has <b id = "p2stack"></b> chips.  </br>
+	<div id = "players_div"> 
+		Player 0 has <b id = "p1stack"></b> chips.  </br>
+		Player 1 has <b id = "p2stack"></b> chips.  </br>
+	</div>
 	Your hand is <b id = "hand"></b>	</br>
 	To call: <b id = "to_call"></b> </br>
 	<b id = "end"></b> 
 
-</form>
+</div>
 
 <div>
 	<button type="submit" value={{active_player}} onclick="raise_bet()" name='raisebtn'>Raise</button>
