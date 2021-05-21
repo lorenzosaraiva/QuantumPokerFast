@@ -3,6 +3,7 @@ import random
 import copy
 import cirq
 import math
+import time
 from cirq import Simulator
 from pokereval.card import Card
 from pokereval.hand_evaluator import HandEvaluator
@@ -33,6 +34,7 @@ class Table():
 		self.showdown = 0
 		self.small_blind = 10
 		self.big_blind = 20 
+		self.quantum_draw_price = 3 * self.big_blind
 		self.dealer = 0
 		self.players_allin = 0
 		self.current_player = self.get_next_player_index(self.dealer)
@@ -40,6 +42,8 @@ class Table():
 		for i in range(num_players):
 			self.players_to_call.append(0)
 		self.set_blinds()
+		self.side_pots = []
+		self.showdown_players = []
 
 
 	################# PLAYER ACTIONS ##################
@@ -59,9 +63,6 @@ class Table():
 		else:
 			response = "Player has not yet covered all bets."
 		return response
-		# else:
-		# exception > players não pagou a aposta. Na real essa checagem idealmente seria feita a cada começo
-		# de turno do player e desativaria o botão Check.
 
 	def raise_bet (self, player_id, amount):
 		if player_id != self.current_player:
@@ -86,6 +87,11 @@ class Table():
 				else:
 					self.players_to_call[i] = self.to_pay - player.current_bet
 				i += 1
+			if player.stack == 0:
+				self.active_players = self.active_players - 1
+				self.players_allin = self.players_allin + 1
+				self.checked_players = 0
+				player.is_allin = 1
 
 			self.next_player()	
 			return ret
@@ -100,7 +106,7 @@ class Table():
 		player = self.all_players[self.current_player]
 		response = "Player " + str(self.current_player) + " "
 		total = self.to_pay - player.current_bet
-		if player.stack >= total:
+		if player.stack > total:
 			self.pot = self.pot + total
 			player.stack = player.stack - total
 			player.current_bet = self.to_pay
@@ -119,7 +125,7 @@ class Table():
 			player.stack = 0
 			self.active_players = self.active_players - 1
 			self.players_allin = self.players_allin + 1
-			if self.checked_players == self.active_players: 
+			if self.checked_players == self.active_players and self.active_players > 0: 
 				response = response + self.next_phase()
 			else:
 				self.next_player()
@@ -156,8 +162,13 @@ class Table():
 		if player_id != self.current_player:
 			return "Not your turn" 
 		player = self.get_active_player()
-		card = "Erro no card"
-		next_qubit = -1
+		if player.stack < self.quantum_draw_price:
+			return "Not enough chips to pay Quantum Draw price."
+		else:
+			self.pot = self.pot + self.quantum_draw_price
+			player.stack = player.stack - self.quantum_draw_price	
+		#card = "Erro no card"
+		#next_qubit = -1
 		if offset == 0:
 			card = player.card1
 			next_qubit = player.next_qubit1
@@ -310,7 +321,7 @@ class Table():
 		return new_table
 
 	def update_player_post_entangle (self, player):
-		#self.quantum_action_used = 1
+		self.quantum_action_used = 1
 
 		to_remove = []
 		for i in range(len(player.card1)):
@@ -378,31 +389,55 @@ class Table():
 		self.checked_players = 0
 
 	def finish_hand (self):
-		
+		ret = ""
 		if self.active_players == 1 and self.players_allin == 0:
 			for player in self.all_players:
 				if player.is_folded == 0:
 					winner = player					
 		else:
+			chips_paid = 0 
 			self.compute_players()
-			score = 0
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
 			for player in self.all_players:
-				if player.is_folded == 1:
-					continue
-				hole = [Card(player.card1[0].power, player.card1[0].suit), Card(player.card2[0].power, player.card2[0].suit)]
-				new_score = HandEvaluator.evaluate_hand(hole, board)
-				if new_score > score:
-					score = new_score
-					winner = player
+				if player.is_folded == 0:
+					self.showdown_players.append(player)
 
-		ret = "Player " + str(winner.number) + " has won " + str(self.pot) + " chips. Click on restart for another hand."
+			while chips_paid != self.pot and len(self.showdown_players) > 1:
+				score = 0
+				for player in self.showdown_players:
+					hole = [Card(player.card1[0].power, player.card1[0].suit), Card(player.card2[0].power, player.card2[0].suit)]
+					new_score = HandEvaluator.evaluate_hand(hole, board)
+					if new_score > score:
+						score = new_score
+						winner = player
+				
+				to_remove = []
+				current_pay = 0
+				for player in self.showdown_players:
+					if player.current_bet > winner.current_bet:
+						winner.stack = winner.stack + winner.current_bet
+						chips_paid = chips_paid + winner.current_bet
+						current_pay = current_pay + winner.current_bet		
+						player.current_bet = player.current_bet - winner.current_bet
+					else:
+						winner.stack = winner.stack + player.current_bet
+						chips_paid = chips_paid + player.current_bet
+						current_pay = current_pay + player.current_bet		
+						player.current_bet = 0
+						to_remove.append(player)
+
+				for player in to_remove:
+					self.showdown_players.remove(player)
+
+				ret = ret + "Player " + str(winner.number) + " has won " + str(current_pay) + " chips."
+
+		ret = ret + " Click on restart for another hand."
 
 		winner.stack = winner.stack + self.pot
 		self.finished = 1
 		return ret
 	
-	def build_deck(self):
+	def build_deck (self):
 		numbers = list(range(2, 11))
 		numbers.append('J')
 		numbers.append('Q')
@@ -422,15 +457,30 @@ class Table():
 		return deck
 
 	def next_player (self):
-		self.current_player = self.current_player + 1
-		self.quantum_action_used = 0
-		if self.current_player == len(self.all_players):
-			self.current_player = 0
-		player = self.all_players[self.current_player]
-		if player.is_allin == 1 or player.is_folded == 1:
-			self.next_player()
+		no_actives = 1
+		for player in self.all_players:
+			if player.is_allin == 0 and player.is_folded == 0:
+				no_actives = 0
+		if no_actives:
+			self.resolve_all_in()
+		else:
+			self.current_player = self.current_player + 1
+			self.quantum_action_used = 0
+			while True:
+				if self.current_player == len(self.all_players):
+					self.current_player = 0
+				player = self.all_players[self.current_player]
+				if player.is_allin == 0 and player.is_folded == 0:
+					break
+				
 		
-	
+	def resolve_all_in (self):
+		while self.phase != 4:
+			self.next_phase()
+
+
+
+
 	def get_next_player_index (self, index):
 		if index == len(self.all_players) - 1:
 			return 0
@@ -455,6 +505,7 @@ class Table():
 		self.current_player = self.get_next_player_index(self.dealer)
 		self.quantum_action_used = 0 
 		self.set_blinds()
+		self.showdown_players = []
 		return "New hand!"
 
 	def measure_players (self):
@@ -467,12 +518,12 @@ class Table():
 			for i in range(player.next_qubit2):
 				player.circuit.append(cirq.measure(player.qubits[i + 5]))
 
-	def draw_card(self):
+	def draw_card (self):
 		position = random.randint(0, len(self.deck) - 1)
 		card = self.deck.pop(position)
 		return card
 
-	def compute_players(self):
+	def compute_players (self):
 		
 		self.measure_players()
 		simulator = Simulator()
@@ -510,11 +561,11 @@ class Table():
 
 	def next_phase (self):
 		self.phase = self.phase + 1
-		self.checked_players = 0
 		self.to_pay = 0
+		self.checked_players = 0
 		self.current_player = self.dealer
-		player =self.all_players[self.dealer]
-		if player.is_allin == 1 or player.is_folded:
+		player = self.all_players[self.dealer]
+		if (player.is_allin == 1 or player.is_folded == 1) and self.active_players > 1:
 			self.next_player()
 
 		self.quantum_action_used = 0

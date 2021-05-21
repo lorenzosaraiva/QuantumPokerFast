@@ -117,11 +117,13 @@ function draw_table(table) {
         document.getElementById("end").innerHTML = end
     }
 
-    /*
+  
     var i = 0
     if (is_first == 1){
         table.all_players.forEach(player => {
             var body = document.createElement("b")
+            var b_id = "p" + i
+            body.id = b_id
             var div = document.getElementById("players_div")
             var linebreak = document.createElement("br")
             var message = "Player " + i + " has " + player.stack + " chips."
@@ -138,10 +140,23 @@ function draw_table(table) {
             i = i + 1
         });
         is_first = 0
+    }else{
+            table.all_players.forEach(player => {
+            var b_id = "p" + i
+            var element = document.getElementById(b_id)
+            var message = "Player " + i + " has " + player.stack + " chips."
+            if (player.is_allin == 1){
+                message = message + " This player is all in."
+            }
+            if (player.is_folded == 1){
+                message = message + " This player has folded."
+            }
+            element.innerHTML = message
+            i = i + 1
+        });
     }
-    */
-    document.getElementById("p1stack").innerHTML = table.all_players[0].stack
-    document.getElementById("p2stack").innerHTML = table.all_players[1].stack
+    //document.getElementById("p1stack").innerHTML = table.all_players[0].stack
+    //document.getElementById("p2stack").innerHTML = table.all_players[1].stack
     //document.getElementById("p3stack").innerHTML = table.all_players[2].stack
 
     var id = new URL(window.location.href).searchParams.get("player")

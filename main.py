@@ -6,7 +6,7 @@ app = FastAPI()
 app.mount("/public", StaticFiles(directory="public"), name="public")
 
 
-table = Table(2)
+table = Table(4)
 
 @app.get("/")
 async def root():
