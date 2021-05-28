@@ -426,7 +426,6 @@ class Table():
 				hand1 = [Card(player1.card1[0].power, player1.card1[0].suit), Card(player1.card2[0].power, player1.card2[0].suit)]
 				score0 = HandEvaluator.evaluate_hand(hand0, board)
 				score1 = HandEvaluator.evaluate_hand(hand1, board)
-				print("CALLED FINISH_HAND AAAAAAA")
 				if score0 != score1:
 					if score0 > score1:
 						winner = player0
