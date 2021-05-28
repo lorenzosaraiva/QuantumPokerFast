@@ -1,6 +1,6 @@
 
-var url = "https://quantum-poker.herokuapp.com/"
-//var url = "http://127.0.0.1:8000/"
+//var url = "https://quantum-poker.herokuapp.com/"
+var url = "http://127.0.0.1:8000/"
 var is_first = 1 // gambiarra
 function draw_player(player) {
     
@@ -220,20 +220,24 @@ async function fold() {
 
 async function quantum_draw1() {
     var id = new URL(window.location.href).searchParams.get("player")
-    console.log(await (await fetch(url + "quantum_draw1/" + id)).text())
+    var answer = await (await fetch(url + "quantum_draw1/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer
+
     await main()
 }
 
 async function quantum_draw2() {
     var id = new URL(window.location.href).searchParams.get("player")
-    console.log(await (await fetch(url + "quantum_draw2/" + id)).text())
+    var answer = await (await fetch(url + "quantum_draw2/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer
+
     await main()
 }
 
 async function entangle1() {
     var id = new URL(window.location.href).searchParams.get("player")
     var answer = await (await fetch(url + "entangle1/" + id)).text()
-    document.getElementById('log').value =  document.getElementById('log').value + answer;
+    document.getElementById('log').value =  document.getElementById('log').value + answer
     await main()
 }
 

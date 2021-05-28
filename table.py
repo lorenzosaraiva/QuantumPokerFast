@@ -33,6 +33,7 @@ class Table():
 		self.pot = 0
 		self.to_pay = 0
 		self.showdown = 0
+		self.quantum_pot = 0
 		self.small_blind = 10
 		self.big_blind = 20 
 		self.quantum_draw_price = 3 * self.big_blind
@@ -93,7 +94,6 @@ class Table():
 				i += 1
 
 			if player.stack == 0:
-				#print("ENTROUUUUUUUUUU")
 				self.active_players = self.active_players - 1
 				self.players_allin = self.players_allin + 1
 				self.checked_players = 0
@@ -118,7 +118,9 @@ class Table():
 			player.current_bet = self.to_pay
 			self.checked_players = self.checked_players + 1
 			self.players_to_call[self.current_player] = 0
-			if self.checked_players == self.active_players:  # acabou rodada de apostas
+			if self.active_players == 1:
+				self.resolve_all_in()
+			elif self.checked_players == self.active_players:  # acabou rodada de apostas
 				response = response + self.next_phase()
 			else:
 				self.next_player()
@@ -177,6 +179,7 @@ class Table():
 			return "Not enough chips to pay Quantum Draw price."
 		else:
 			self.pot = self.pot + self.quantum_draw_price
+			self.quantum_pot = self.quantum_pot + self.quantum_draw_price
 			player.stack = player.stack - self.quantum_draw_price	
 		#card = "Erro no card"
 		#next_qubit = -1
@@ -260,7 +263,8 @@ class Table():
 			player.entangled2.append([origin, next_qubit])
 
 		self.update_player_post_entangle(player)
-		return ""
+		ret = "Player " + str(self.current_player) + " has entangled."
+		return ret
 	
 	def entangle_diff_1_2 (self, player_id):
 		if self.quantum_action_used == 1:
@@ -268,8 +272,6 @@ class Table():
 		if player_id != self.current_player:
 			return "Not your turn"
 		player = self.all_players[self.current_player]
-
-		ret = ""
 		
 		origin = player.next_qubit1 - 1
 		target = player.next_qubit2
@@ -288,7 +290,8 @@ class Table():
 
 		player.diff_ent = 1
 		self.update_player_post_entangle(player)
-		return ""
+		ret = "Player " + str(self.current_player) + " has entangled."
+		return ret
 
 	def entangle_diff_2_1 (self, player_id):
 		if self.quantum_action_used == 1:
@@ -297,7 +300,6 @@ class Table():
 			return "Not your turn"
 		player = self.all_players[self.current_player]
 
-		ret = ""
 		
 		origin = player.next_qubit2 - 1
 		target = player.next_qubit1
@@ -310,23 +312,22 @@ class Table():
 			ret = "All qubits already used."
 			return ret
 
-		player.circuit.append(cirq.CNOT(player.qubits[origin + 5], player.qubits[target]))
+		player.circuit.append(cirq.CNOT(player.qubits[origin + self.max_qubits], player.qubits[target]))
 		self.quantum_draw(player_id, 0, True)
 
 		player.diff_ent = 1
 		player.diff_ent_index.append([target, origin])
 		self.update_player_post_entangle(player)
-		return ""
+		ret = "Player " + str(self.current_player) + " has entangled."
+		return ret
 
 	################### PLAYER ACTIONS END #####################
 
 	def serialize (self):
 		new_table = copy.deepcopy(self)
-		new_table.players = []
 		new_table.all_players = []
 		for player in self.all_players:
 			new_player = player.serialize()
-			new_table.players.append(new_player)
 			new_table.all_players.append(new_player)	
 
 		return new_table
@@ -414,7 +415,7 @@ class Table():
 		else:
 			chips_paid = 0 
 			self.compute_players()
-			self.showdown_players = self.all_players[:]
+			#self.showdown_players = self.all_players[:]
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
 			#for player in self.all_players:
 			#	if player.is_folded == 0:
@@ -426,6 +427,7 @@ class Table():
 				hand1 = [Card(player1.card1[0].power, player1.card1[0].suit), Card(player1.card2[0].power, player1.card2[0].suit)]
 				score0 = HandEvaluator.evaluate_hand(hand0, board)
 				score1 = HandEvaluator.evaluate_hand(hand1, board)
+				
 				if score0 != score1:
 					if score0 > score1:
 						winner = player0
@@ -433,19 +435,26 @@ class Table():
 					else:
 						winner = player1
 						loser = player0
-					winner.stack = winner.stack + winner.total_bet
+					before_stack = winner.stack
+					winner.stack = winner.stack + winner.total_bet 
+					winner.stack = winner.stack + self.quantum_pot 
+
 					if winner.total_bet > loser.total_bet:
 						winner.stack = winner.stack + loser.total_bet
 					else:
 						winner.stack = winner.stack + winner.total_bet
 						loser.stack = loser.stack + loser.total_bet - winner.total_bet
+					chips_won = winner.stack - before_stack
+					ret = "Player " + str(self.current_player) + " won " + str(chips_won) + " chips."
 				else:
-					player0.stack = player0.stack + player0.total_bet
-					player1.stack = player1.stack + player1.total_bet
+					player0.stack = player0.stack + player0.total_bet + (self.quantum_pot/2)
+					player1.stack = player1.stack + player1.total_bet + (self.quantum_pot/2)
+					ret = "Hand was a tie. Pot split."
+
 
 				self.finished = 1
-				return ""
-
+				return ret
+			
 			while chips_paid <= self.pot and len(self.showdown_players) > 0:
 				score = 0
 				winners = []
@@ -461,7 +470,6 @@ class Table():
 						else:
 						 	winners = [player]
 					score = new_score
-				#print(len(self.showdown_players))
 				#for player in self.showdown_players:
 				#	print(player.number)
 				#	print(player.total_bet)
@@ -557,6 +565,7 @@ class Table():
 		return index + 1
 
 	def restart_hand (self):
+
 		if not self.finished:
 			return "Hand is not over yet!"
 		if self.all_players[0].stack == 0 or self.all_players[1].stack == 0:
@@ -565,6 +574,7 @@ class Table():
 		self.phase = 0
 		self.showdown = 0
 		self.finished = 0
+		self.quantum_pot = 0
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
 		self.players_allin = 0
@@ -572,7 +582,7 @@ class Table():
 		self.cards = []
 		self.deck = self.build_deck()
 		for player in self.all_players:
-			player.reset_player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), cirq.Circuit())
+			player.reset_player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(self.max_qubits * 2), cirq.Circuit())
 		self.dealer = self.get_next_player_index(self.dealer)
 		self.current_player = self.get_next_player_index(self.dealer)
 		self.quantum_action_used = 0 
@@ -588,7 +598,7 @@ class Table():
 				player.circuit.append(cirq.measure(player.qubits[i]))
 
 			for i in range(player.next_qubit2):
-				player.circuit.append(cirq.measure(player.qubits[i + 5]))
+				player.circuit.append(cirq.measure(player.qubits[i + self.max_qubits]))
 
 	def draw_card (self):
 		position = random.randint(0, len(self.deck) - 1)
@@ -623,6 +633,7 @@ class Table():
 
 			if len(player.card2) > 1:
 				player.card2 = [player.card2.pop(int(bits2, 2))]
+			
 
 
 	def get_active_player (self):
@@ -632,7 +643,6 @@ class Table():
 		return format(x, 'b').zfill(n)
 
 	def next_phase (self):
-		#print("Called Next Phase")
 		self.phase = self.phase + 1
 		self.to_pay = 0
 		self.checked_players = 0

@@ -19,7 +19,7 @@ class Player():
 		self.current_bet = 0
 		self.total_bet = 0
 		self.is_allin = 0
-		self.stack = 11000
+		self.stack = 10000
 		self.is_folded = 0
 
 	def reset_player(self, card1, card2, qubits, circuit):
