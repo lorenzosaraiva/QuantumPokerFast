@@ -439,7 +439,7 @@ class Table():
 						winner.stack = winner.stack + loser.total_bet
 					else:
 						winner.stack = winner.stack + winner.total_bet
-						loser.stack = loser.total_bet - winner.total_bet
+						loser.stack = loser.stack + loser.total_bet - winner.total_bet
 				else:
 					player0.stack = player0.stack + player0.total_bet
 					player1.stack = player1.stack + player1.total_bet
