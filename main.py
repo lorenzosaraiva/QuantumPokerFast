@@ -6,7 +6,7 @@ app = FastAPI()
 app.mount("/public", StaticFiles(directory="public"), name="public")
 
 
-table = Table(4)
+table = Table(2)
 
 @app.get("/")
 async def root():
@@ -63,3 +63,7 @@ async def entangle_diff_2_1(player_id:int):
 @app.get("/restart_hand/")
 async def restart_hand():
     return table.restart_hand()
+
+@app.get("/top_up/{player_id}")
+async def top_up(player_id:int):
+    return table.top_up(player_id)

@@ -4,6 +4,7 @@ import copy
 import cirq
 import math
 import time
+
 from cirq import Simulator
 from pokereval.card import Card
 from pokereval.hand_evaluator import HandEvaluator
@@ -70,6 +71,9 @@ class Table():
 		if amount <= 0: 
 			return "Invalid value" 
 
+		if self.active_players == 1:
+			return "Can only call or fold"
+
 		player = self.all_players[self.current_player]
 		total = amount + self.to_pay - player.current_bet 
 		if player.stack >= total:
@@ -81,13 +85,15 @@ class Table():
 			ret = "Player " + str(self.current_player) + " has raised to " + str(self.to_pay)
 
 			i = 0
-			for player in self.all_players:
-				if player.is_folded == 1 or player.is_allin == 1:
+			for call_player in self.all_players:
+				if call_player.is_folded == 1 or call_player.is_allin == 1:
 					self.players_to_call[i] = 0
 				else:
-					self.players_to_call[i] = self.to_pay - player.current_bet
+					self.players_to_call[i] = self.to_pay - call_player.current_bet
 				i += 1
+
 			if player.stack == 0:
+				#print("ENTROUUUUUUUUUU")
 				self.active_players = self.active_players - 1
 				self.players_allin = self.players_allin + 1
 				self.checked_players = 0
@@ -118,19 +124,21 @@ class Table():
 				self.next_player()
 			response = response + "has called for " + \
 				str(self.to_pay) + " chips."
-			return response
 		else:
 			player.is_allin = 1
 			self.pot = self.pot + player.stack
+			player.current_bet = player.stack + player.current_bet
 			player.stack = 0
 			self.active_players = self.active_players - 1
 			self.players_allin = self.players_allin + 1
-			if self.checked_players == self.active_players and self.active_players > 0: 
+			if self.active_players == 1:
+				self.resolve_all_in()
+			elif self.checked_players == self.active_players and self.active_players > 1: 
 				response = response + self.next_phase()
 			else:
 				self.next_player()
 			response = response + "You had not enough chips to cover the bet, so you went all in."
-			return response
+		return response
 
 	def fold (self, player_id):
 		if player_id != self.current_player:
@@ -138,8 +146,11 @@ class Table():
 		player = self.all_players[player_id]
 		player.is_folded = 1
 		self.active_players = self.active_players - 1
-		if self.active_players == 1:
-			return self.finish_hand()
+		if self.active_players <= 1:
+			if self.players_allin <= 1:
+				return self.finish_hand()
+			else:
+				return self.resolve_all_in()
 		else:
 			if self.checked_players == self.active_players:  # acabou rodada de apostas
 				self.next_phase()
@@ -380,6 +391,10 @@ class Table():
 	def get_call_amount (self, player_id):
 		ret = self.to_pay - self.all_players[player_id].current_bet
 		return ret
+	
+	def top_up (self, player_id):
+		self.all_players[player_id].stack += 1000
+		return "Player got another 1000 chips"
 
 	def set_blinds (self):
 		small = self.get_next_player_index(self.dealer)
@@ -390,50 +405,105 @@ class Table():
 
 	def finish_hand (self):
 		ret = ""
-		if self.active_players == 1 and self.players_allin == 0:
+		if self.active_players + self.players_allin <= 1:
 			for player in self.all_players:
 				if player.is_folded == 0:
-					winner = player					
+					winner = player
+					winner.stack = winner.stack + self.pot
+					break					
 		else:
 			chips_paid = 0 
 			self.compute_players()
+			self.showdown_players = self.all_players[:]
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
-			for player in self.all_players:
-				if player.is_folded == 0:
-					self.showdown_players.append(player)
-
-			while chips_paid != self.pot and len(self.showdown_players) > 1:
-				score = 0
-				for player in self.showdown_players:
-					hole = [Card(player.card1[0].power, player.card1[0].suit), Card(player.card2[0].power, player.card2[0].suit)]
-					new_score = HandEvaluator.evaluate_hand(hole, board)
-					if new_score > score:
-						score = new_score
-						winner = player
-				
-				to_remove = []
-				current_pay = 0
-				for player in self.showdown_players:
-					if player.current_bet > winner.current_bet:
-						winner.stack = winner.stack + winner.current_bet
-						chips_paid = chips_paid + winner.current_bet
-						current_pay = current_pay + winner.current_bet		
-						player.current_bet = player.current_bet - winner.current_bet
+			#for player in self.all_players:
+			#	if player.is_folded == 0:
+			#		self.showdown_players.append(player)
+			if len(self.all_players) == 2:
+				player0 = self.all_players[0]
+				player1 = self.all_players[1]
+				hand0 = [Card(player0.card1[0].power, player0.card1[0].suit), Card(player0.card2[0].power, player0.card2[0].suit)]
+				hand1 = [Card(player1.card1[0].power, player1.card1[0].suit), Card(player1.card2[0].power, player1.card2[0].suit)]
+				score0 = HandEvaluator.evaluate_hand(hand0, board)
+				score1 = HandEvaluator.evaluate_hand(hand1, board)
+				print("CALLED FINISH_HAND AAAAAAA")
+				if score0 != score1:
+					if score0 > score1:
+						winner = player0
+						loser = player1
 					else:
-						winner.stack = winner.stack + player.current_bet
-						chips_paid = chips_paid + player.current_bet
-						current_pay = current_pay + player.current_bet		
-						player.current_bet = 0
-						to_remove.append(player)
+						winner = player1
+						loser = player0
+					winner.stack = winner.stack + winner.total_bet
+					if winner.total_bet > loser.total_bet:
+						winner.stack = winner.stack + loser.total_bet
+					else:
+						winner.stack = winner.stack + winner.total_bet
+						loser.stack = loser.total_bet - winner.total_bet
+				else:
+					player0.stack = player0.stack + player0.total_bet
+					player1.stack = player1.stack + player1.total_bet
 
-				for player in to_remove:
-					self.showdown_players.remove(player)
+				self.finished = 1
+				return ""
 
-				ret = ret + "Player " + str(winner.number) + " has won " + str(current_pay) + " chips."
+			while chips_paid <= self.pot and len(self.showdown_players) > 0:
+				score = 0
+				winners = []
+				for player in self.showdown_players:
+					if player.is_folded:
+						new_score = -1
+					else:
+						hole = [Card(player.card1[0].power, player.card1[0].suit), Card(player.card2[0].power, player.card2[0].suit)]
+						new_score = HandEvaluator.evaluate_hand(hole, board)
+					if new_score >= score:
+						if new_score == score:
+						  	winners.append(player)
+						else:
+						 	winners = [player]
+					score = new_score
+				#print(len(self.showdown_players))
+				#for player in self.showdown_players:
+				#	print(player.number)
+				#	print(player.total_bet)
+				#print("Winners len: --------------------------------------")
+				#print(len(winners))
+				current_pay = 0
+				to_remove = []
+				if len(winners) == 1:
+					for winner in winners:
+						winner_bet = winner.total_bet
+						to_remove.append(winner)
+						chips_paid = chips_paid + winner_bet
+						winner.stack = winner.stack + winner_bet
+						current_pay = current_pay + winner_bet		
+						for player in self.showdown_players:
+							if player.number != winner.number:
+								if player.total_bet > winner_bet:
+									winner.stack = winner.stack + winner_bet
+									chips_paid = chips_paid + winner_bet
+									current_pay = current_pay + winner_bet		
+									player.total_bet = player.total_bet - winner_bet
+								else:
+									winner.stack = winner.stack + player.total_bet
+									chips_paid = chips_paid + player.total_bet
+									current_pay = current_pay + player.total_bet		
+									player.total_bet = 0
+									to_remove.append(player)
+
+					# Remove os vencedores que já cobraram e os que não tem nada mais a pagar.
+					for player in to_remove:
+						self.showdown_players.remove(player)
+					ret = ret + "Player " + str(winner.number) + " has won " + str(current_pay) + " chips."
+				else:
+					#empate - só funciona para o caso onde todos da mesa empatam.
+					for player in winners:
+						player.stack = player.stack + player.total_bet
+					ret = ret + "Hand has tied. Pot is split evenly between the players."
+		
+				
 
 		ret = ret + " Click on restart for another hand."
-
-		winner.stack = winner.stack + self.pot
 		self.finished = 1
 		return ret
 	
@@ -457,6 +527,7 @@ class Table():
 		return deck
 
 	def next_player (self):
+		#print("called next player ")
 		no_actives = 1
 		for player in self.all_players:
 			if player.is_allin == 0 and player.is_folded == 0:
@@ -464,9 +535,9 @@ class Table():
 		if no_actives:
 			self.resolve_all_in()
 		else:
-			self.current_player = self.current_player + 1
 			self.quantum_action_used = 0
 			while True:
+				self.current_player = self.current_player + 1
 				if self.current_player == len(self.all_players):
 					self.current_player = 0
 				player = self.all_players[self.current_player]
@@ -489,6 +560,8 @@ class Table():
 	def restart_hand (self):
 		if not self.finished:
 			return "Hand is not over yet!"
+		if self.all_players[0].stack == 0 or self.all_players[1].stack == 0:
+			return "Only one player. Top up before playing another hand"
 		self.pot = 0
 		self.phase = 0
 		self.showdown = 0
@@ -560,17 +633,19 @@ class Table():
 		return format(x, 'b').zfill(n)
 
 	def next_phase (self):
+		#print("Called Next Phase")
 		self.phase = self.phase + 1
 		self.to_pay = 0
 		self.checked_players = 0
 		self.current_player = self.dealer
-		player = self.all_players[self.dealer]
-		if (player.is_allin == 1 or player.is_folded == 1) and self.active_players > 1:
+		first_player = self.all_players[self.dealer]
+		if (first_player.is_allin == 1 or first_player.is_folded == 1) and self.active_players > 1:
 			self.next_player()
 
 		self.quantum_action_used = 0
 
 		for player in self.all_players:
+			player.total_bet = player.total_bet + player.current_bet
 			player.current_bet = 0
 
 		if self.phase == 1:

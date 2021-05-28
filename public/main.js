@@ -258,6 +258,14 @@ async function entangle_diff_2_1() {
     await main()
 }
 
+async function top_up() {
+    var id = new URL(window.location.href).searchParams.get("player")
+    var answer = await (await fetch(url + "top_up/" + id)).text()
+    document.getElementById('log').value =  document.getElementById('log').value + answer;
+    await main()
+}
+
+
 
 window.check = check
 window.call = call
@@ -266,6 +274,7 @@ window.fold = fold
 window.quantum_draw1 = quantum_draw1
 window.quantum_draw2 = quantum_draw2
 window.restart_hand = restart_hand
+window.top_up = top_up
 
 main()
 setInterval(main, 1000)
