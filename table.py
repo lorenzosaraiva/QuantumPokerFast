@@ -5,7 +5,6 @@ import cirq
 import math
 import time
 
-from cirq import Simulator
 from pokereval.card import Card
 from pokereval.hand_evaluator import HandEvaluator
 from card import _Card
@@ -326,9 +325,14 @@ class Table():
 	def serialize (self):
 		new_table = copy.deepcopy(self)
 		new_table.all_players = []
+		new_table.showdown_players = []
 		for player in self.all_players:
 			new_player = player.serialize()
 			new_table.all_players.append(new_player)	
+		
+		for player in self.showdown_players:
+			new_player = player.serialize()
+			new_table.showdown_players.append(new_player)	
 
 		return new_table
 
@@ -405,7 +409,6 @@ class Table():
 		self.checked_players = 0
 
 	def finish_hand (self):
-		ret = ""
 		if self.active_players + self.players_allin <= 1:
 			for player in self.all_players:
 				if player.is_folded == 0:
@@ -413,13 +416,13 @@ class Table():
 					winner.stack = winner.stack + self.pot
 					break					
 		else:
-			chips_paid = 0 
 			self.compute_players()
-			#self.showdown_players = self.all_players[:]
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
-			#for player in self.all_players:
-			#	if player.is_folded == 0:
-			#		self.showdown_players.append(player)
+			for player in self.all_players:
+				if player.is_folded == 0:
+					self.showdown_players.append(player)
+
+			############# 2 PLAYERS ONLY ############
 			if len(self.all_players) == 2:
 				player0 = self.all_players[0]
 				player1 = self.all_players[1]
@@ -454,8 +457,13 @@ class Table():
 
 				self.finished = 1
 				return ret
-			
-			while chips_paid <= self.pot and len(self.showdown_players) > 0:
+
+			################ 2 PLAYERS ONLY END #################
+
+			paylist = self.all_players[:]
+			chips_paid = 0 
+
+			while chips_paid <= self.pot and len(paylist) > 0:
 				score = 0
 				winners = []
 				for player in self.showdown_players:
@@ -470,43 +478,44 @@ class Table():
 						else:
 						 	winners = [player]
 					score = new_score
-				#for player in self.showdown_players:
-				#	print(player.number)
-				#	print(player.total_bet)
-				#print("Winners len: --------------------------------------")
-				#print(len(winners))
+
+
 				current_pay = 0
 				to_remove = []
-				if len(winners) == 1:
-					for winner in winners:
-						winner_bet = winner.total_bet
-						to_remove.append(winner)
-						chips_paid = chips_paid + winner_bet
-						winner.stack = winner.stack + winner_bet
-						current_pay = current_pay + winner_bet		
-						for player in self.showdown_players:
-							if player.number != winner.number:
-								if player.total_bet > winner_bet:
-									winner.stack = winner.stack + winner_bet
-									chips_paid = chips_paid + winner_bet
-									current_pay = current_pay + winner_bet		
-									player.total_bet = player.total_bet - winner_bet
-								else:
-									winner.stack = winner.stack + player.total_bet
-									chips_paid = chips_paid + player.total_bet
-									current_pay = current_pay + player.total_bet		
-									player.total_bet = 0
-									to_remove.append(player)
+								
+				for winner in winners:
+					winner_bet = winner.total_bet
 
-					# Remove os vencedores que já cobraram e os que não tem nada mais a pagar.
-					for player in to_remove:
-						self.showdown_players.remove(player)
-					ret = ret + "Player " + str(winner.number) + " has won " + str(current_pay) + " chips."
-				else:
-					#empate - só funciona para o caso onde todos da mesa empatam.
-					for player in winners:
-						player.stack = player.stack + player.total_bet
-					ret = ret + "Hand has tied. Pot is split evenly between the players."
+					# vencedor será removido da paylist
+					to_remove.append(winner)
+
+					# vencedor ganha de volta o que apostou na mão
+					chips_paid = chips_paid + winner_bet
+					winner.stack = winner.stack + winner_bet
+					current_pay = current_pay + winner_bet	
+
+					# percorre os jogadores que ainda tem que pagar
+					for player in paylist:
+						# pula o próprio vencedor
+						if player.number != winner.number:
+							# caso a aposta do player atual seja menor que do vencedor
+							if player.total_bet > winner_bet:
+								# tira do player atual um valor igual a aposta do vencedor							
+								winner.stack = winner.stack + winner_bet
+								chips_paid = chips_paid + winner_bet
+								current_pay = current_pay + winner_bet		
+								player.total_bet = player.total_bet - winner_bet
+							else:
+								winner.stack = winner.stack + player.total_bet
+								chips_paid = chips_paid + player.total_bet
+								current_pay = current_pay + player.total_bet		
+								player.total_bet = 0
+								to_remove.append(player)
+
+				# Remove os vencedores que já cobraram e os que não tem nada mais a pagar.
+				for player in to_remove:
+					self.showdown_players.remove(player)
+				ret = ret + "Player " + str(winner.number) + " has won " + str(current_pay) + " chips."
 		
 				
 
@@ -608,7 +617,7 @@ class Table():
 	def compute_players (self):
 		
 		self.measure_players()
-		simulator = Simulator()
+		simulator = cirq.Simulator()
 		for player in self.all_players:
 			if player.is_folded == 1:
 				continue
