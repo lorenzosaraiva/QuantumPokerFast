@@ -8,7 +8,7 @@ class Player():
 	
 	__metaclass__ = MP
 
-	def __init__(self, card1, card2, qubits, number, circuit, user):
+	def __init__(self, card1, card2, qubits, number, circuit, username, table):
 		self.card1 = [card1]
 		self.card2 = [card2]
 		self.card1_active = [card1]
@@ -25,11 +25,13 @@ class Player():
 		self.next_entangle = 0
 		self.current_bet = 0
 		self.total_bet = 0
+		self.to_call = 0
 		self.is_allin = 0
 		self.stack = 10000
 		self.is_folded = 0
+		self.showdown = 0
 		self.table = None 
-		self.user = user	
+		self.username = username	
 
 	def reset_player(self, card1, card2, qubits, circuit):
 		self.card1 = [card1]

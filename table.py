@@ -12,7 +12,7 @@ from player import Player
 
 
 class Table():
-	def __init__(self, num_players):
+	def __init__(self):
 		self.flop1 = "Error"
 		self.flop2 = "Error"
 		self.flop3 = "Error"
@@ -20,12 +20,8 @@ class Table():
 		self.river = "Error"
 		self.cards = []
 		self.deck = self.build_deck()
-		self.all_players = []
+		self.all_players = {}
 		self.max_qubits = 5
-		for i in range(num_players):
-			player = Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(self.max_qubits * 2), i, cirq.Circuit())		
-			player.table = self
-			self.all_players.append(player)
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
 		# 0 - pre-flop, 1 - flop, 2 - turn, 3 - river.
@@ -40,11 +36,6 @@ class Table():
 		self.quantum_draw_price = 3 * self.big_blind
 		self.dealer = 0
 		self.players_allin = 0
-		self.current_player = self.get_next_player_index(self.dealer)
-		self.players_to_call = []
-		for i in range(num_players):
-			self.players_to_call.append(0)
-		self.set_blinds()
 		self.side_pots = []
 		self.showdown_players = []
 		
@@ -92,9 +83,9 @@ class Table():
 			i = 0
 			for call_player in self.all_players:
 				if call_player.is_folded == 1 or call_player.is_allin == 1:
-					self.players_to_call[i] = 0
+					call_player.to_call = 0
 				else:
-					self.players_to_call[i] = self.to_pay - call_player.current_bet
+					call_player.to_call = self.to_pay - call_player.current_bet
 				i += 1
 
 			if player.stack == 0:
@@ -122,7 +113,7 @@ class Table():
 			player.stack = player.stack - total
 			player.current_bet = self.to_pay
 			self.checked_players = self.checked_players + 1
-			self.players_to_call[self.current_player] = 0
+			player.to_call = 0
 			if self.active_players == 1:
 				self.resolve_all_in()
 			elif self.checked_players == self.active_players:  # acabou rodada de apostas
@@ -338,6 +329,11 @@ class Table():
 
 	################### PLAYER ACTIONS END #####################
 
+	def get_player(self, username):
+		for player_username, player in self.all_players.items():
+			if player_username == username:
+				return player
+	
 	def basic_checks(self, player_id):
 		if len(self.all_players) == 1:
 			return "Please wait for another player"
@@ -352,23 +348,23 @@ class Table():
 		new_table = copy.deepcopy(self)
 		new_table.all_players = []
 		new_table.showdown_players = []
-		for player in self.all_players:
+		for username, player in self.all_players.items():
+			player.table = None
 			new_player = player.serialize()
+			player.table = self
 			new_table.all_players.append(new_player)	
 		
-		for player in self.showdown_players:
-			new_player = player.serialize()
-			new_table.showdown_players.append(new_player)	
+		#for player in self.showdown_players:
+		#	new_player = player.serialize()
+		#	new_table.showdown_players.append(new_player)	
 
 		return new_table
 	
-	def add_player (self):
+	def add_player (self, username):
 		current_players = len(self.all_players)
 		qubits = cirq.LineQubit.range(self.max_qubits * 2)
-		new_player = Player(self.draw_card(), self.draw_card(), qubits, current_players, cirq.Circuit())
-		new_player.table = self
-		self.all_players.append(new_player)
-		self.players_to_call.append(0)
+		new_player = Player(self.draw_card(), self.draw_card(), qubits, current_players, cirq.Circuit(), username, self)
+		self.all_players[username] = new_player
 		self.finished = 1
 		self.restart_hand()
 		return new_player
@@ -611,7 +607,8 @@ class Table():
 		return index + 1
 
 	def restart_hand (self):
-
+		if len(self.all_players) <= 1:
+			return "Wait for another player"
 		if not self.finished:
 			return "Hand is not over yet!"
 		if self.all_players[0].stack == 0 or self.all_players[1].stack == 0:
