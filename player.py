@@ -1,7 +1,14 @@
 import copy
 
+class MP(type):
+	def __repr__(self):
+		return self.user.username
+
 class Player():
-	def __init__(self, card1, card2, qubits, number, circuit):
+	
+	__metaclass__ = MP
+
+	def __init__(self, card1, card2, qubits, number, circuit, user):
 		self.card1 = [card1]
 		self.card2 = [card2]
 		self.card1_active = [card1]
@@ -9,7 +16,7 @@ class Player():
 		self.qubits = qubits
 		self.next_qubit1 = 0
 		self.next_qubit2 = 0
-		self.number = number
+		self.id = number
 		self.circuit = circuit
 		self.entangled1 = []
 		self.entangled2 = []
@@ -21,6 +28,8 @@ class Player():
 		self.is_allin = 0
 		self.stack = 10000
 		self.is_folded = 0
+		self.table = None 
+		self.user = user	
 
 	def reset_player(self, card1, card2, qubits, circuit):
 		self.card1 = [card1]
@@ -50,3 +59,17 @@ class Player():
 		new_player.circuit = []
 		new_player.qubits = []
 		return new_player
+
+	################################ ACTIONS ##################################
+
+	def check (self):
+		return self.table.check(self.id)
+
+	def raise_bet (self, amount=100):
+		return self.table.raise_bet(self.id, amount)
+		
+	def call (self):
+		return self.table.call(self.id)
+
+	def fold (self):
+		return self.table.fold(self.id)

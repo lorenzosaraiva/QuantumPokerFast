@@ -23,7 +23,9 @@ class Table():
 		self.all_players = []
 		self.max_qubits = 5
 		for i in range(num_players):
-			self.all_players.append(Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(10), i, cirq.Circuit()))		
+			player = Player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(self.max_qubits * 2), i, cirq.Circuit())		
+			player.table = self
+			self.all_players.append(player)
 		self.active_players = len(self.all_players)
 		self.checked_players = 0
 		# 0 - pre-flop, 1 - flop, 2 - turn, 3 - river.
@@ -45,13 +47,15 @@ class Table():
 		self.set_blinds()
 		self.side_pots = []
 		self.showdown_players = []
+		
 
 
 	################# PLAYER ACTIONS ##################
 
 	def check (self, player_id):
-		if player_id != self.current_player:
-			return "Not your turn" 
+		basic_checks = self.basic_checks(player_id)
+		if basic_checks != 1:
+			return basic_checks
 		player = self.all_players[self.current_player]
 		response = ""
 		if player.current_bet == self.to_pay:  # checa se player já cobriu aposta
@@ -65,12 +69,13 @@ class Table():
 			response = "Player has not yet covered all bets."
 		return response
 
-	def raise_bet (self, player_id, amount):
-		if player_id != self.current_player:
-			return "Not your turn"
+	def raise_bet (self, player_id, amount=100):
+		basic_checks = self.basic_checks(player_id)
+		if basic_checks != 1:
+			return basic_checks
+
 		if amount <= 0: 
 			return "Invalid value" 
-
 		if self.active_players == 1:
 			return "Can only call or fold"
 
@@ -104,8 +109,9 @@ class Table():
 			return "Not enough money"
 
 	def call (self, player_id):
-		if player_id != self.current_player:
-			return "Not your turn" 
+		basic_checks = self.basic_checks(player_id)
+		if basic_checks != 1:
+			return basic_checks 
 		if self.to_pay == 0:
 			return "Nothing to call, either check or raise."
 		player = self.all_players[self.current_player]
@@ -142,8 +148,9 @@ class Table():
 		return response
 
 	def fold (self, player_id):
-		if player_id != self.current_player:
-			return "Not your turn" 
+		basic_checks = self.basic_checks(player_id)
+		if basic_checks != 1:
+			return basic_checks
 		player = self.all_players[player_id]
 		player.is_folded = 1
 		self.active_players = self.active_players - 1
@@ -159,21 +166,22 @@ class Table():
 				self.next_player()
 
 	def quantum_draw1 (self, player_id):
-		if self.quantum_action_used == 1:
-			return "Quantum Action already used this turn."
 		return self.quantum_draw(player_id, 0, False)
 
-
 	def quantum_draw2 (self, player_id):
-		if self.quantum_action_used == 1:
-			return "Quantum Action already used this turn."
-		return self.quantum_draw(player_id, 5, False)
+		return self.quantum_draw(player_id, self.max_qubits, False)
 
 	def quantum_draw (self, player_id, offset, entangle):
 		# Caso o card esteja normal, transforma em qubit
-		if player_id != self.current_player:
-			return "Not your turn" 
+		basic_checks = self.basic_checks(player_id)
+		if basic_checks != 1:
+			return basic_checks
+
+		if self.quantum_action_used == 1:
+			return "Quantum Action already used this turn."
+
 		player = self.get_active_player()
+
 		if player.stack < self.quantum_draw_price:
 			return "Not enough chips to pay Quantum Draw price."
 		else:
@@ -189,7 +197,7 @@ class Table():
 			card = player.card2
 			next_qubit = player.next_qubit2
 		
-		if next_qubit >= 5:
+		if next_qubit >= self.max_qubits:
 			return "All qubits already used"
 
 		if not entangle:
@@ -223,14 +231,18 @@ class Table():
 		return response
 
 	def entangle_same_card1 (self, player_id):
+		if self.finished == 1:
+			return "Hand is over. Click on restart for another hand."
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
-		self.entangle_same_card(player_id, 0)
+		return self.entangle_same_card(player_id, 0)
 
 	def entangle_same_card2 (self, player_id):
+		if self.finished == 1:
+			return "Hand is over. Click on restart for another hand."
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
-		self.entangle_same_card(player_id, self.max_qubits)
+		return self.entangle_same_card(player_id, self.max_qubits)
 
 
 	def entangle_same_card (self, player_id, offset):
@@ -266,6 +278,8 @@ class Table():
 		return ret
 	
 	def entangle_diff_1_2 (self, player_id):
+		if self.finished == 1:
+			return "Hand is over. Click on restart for another hand."
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
 		if player_id != self.current_player:
@@ -293,6 +307,8 @@ class Table():
 		return ret
 
 	def entangle_diff_2_1 (self, player_id):
+		if self.finished == 1:
+			return "Hand is over. Click on restart for another hand."
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
 		if player_id != self.current_player:
@@ -322,6 +338,16 @@ class Table():
 
 	################### PLAYER ACTIONS END #####################
 
+	def basic_checks(self, player_id):
+		if len(self.all_players) == 1:
+			return "Please wait for another player"
+		if player_id != self.current_player:
+			return "Not your turn"
+		if self.finished:
+			return "Hand is over. Click on restart for another hand."
+		return 1
+
+
 	def serialize (self):
 		new_table = copy.deepcopy(self)
 		new_table.all_players = []
@@ -335,9 +361,20 @@ class Table():
 			new_table.showdown_players.append(new_player)	
 
 		return new_table
+	
+	def add_player (self):
+		current_players = len(self.all_players)
+		qubits = cirq.LineQubit.range(self.max_qubits * 2)
+		new_player = Player(self.draw_card(), self.draw_card(), qubits, current_players, cirq.Circuit())
+		new_player.table = self
+		self.all_players.append(new_player)
+		self.players_to_call.append(0)
+		self.finished = 1
+		self.restart_hand()
+		return new_player
 
 	def update_player_post_entangle (self, player):
-		self.quantum_action_used = 1
+		#self.quantum_action_used = 1
 
 		to_remove = []
 		for i in range(len(player.card1)):
@@ -414,7 +451,8 @@ class Table():
 				if player.is_folded == 0:
 					winner = player
 					winner.stack = winner.stack + self.pot
-					break					
+					self.finished = 1
+					return "Player " + str(winner.number) + " won " + str(self.pot) + "chips. Click on restart for another hand."				
 		else:
 			self.compute_players()
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
@@ -452,11 +490,11 @@ class Table():
 				else:
 					player0.stack = player0.stack + player0.total_bet + (self.quantum_pot/2)
 					player1.stack = player1.stack + player1.total_bet + (self.quantum_pot/2)
-					ret = "Hand was a tie. Pot split."
+					ret = "Hand was a tie. Pot split." 
 
 
 				self.finished = 1
-				return ret
+				return ret + "Click on restart for another hand."
 
 			################ 2 PLAYERS ONLY END #################
 
@@ -530,14 +568,13 @@ class Table():
 		numbers.append('K')
 		numbers.append('A')
 		powers = list(range(2, 15))
-		suits = ['♡', '♠', '♣', '♢']
+		suits = ['H', 'S', 'C', 'D']
 		suits_numbers = [1, 2, 3, 4]
 
 		deck = []
 		for i in range(len(numbers)):
 			for j in range(len(suits)):
-				card = _Card(str(numbers[i]) + suits[j] +
-							" ", powers[i], suits_numbers[j])
+				card = _Card(str(numbers[i]) + suits[j], powers[i], suits_numbers[j])
 				deck.append(card)
 
 		return deck

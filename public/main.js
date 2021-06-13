@@ -280,6 +280,6 @@ window.quantum_draw2 = quantum_draw2
 window.restart_hand = restart_hand
 window.top_up = top_up
 
-main()
-setInterval(main, 1000)
+//main()
+//setInterval(main, 1000)
 
