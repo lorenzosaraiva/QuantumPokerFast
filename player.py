@@ -1,12 +1,7 @@
 import copy
 
-class MP(type):
-	def __repr__(self):
-		return self.user.username
-
 class Player():
 	
-	__metaclass__ = MP
 
 	def __init__(self, card1, card2, qubits, number, circuit, username, table):
 		self.card1 = [card1]
@@ -60,7 +55,7 @@ class Player():
 		new_player = copy.deepcopy(self)
 		new_player.circuit = []
 		new_player.qubits = []
-		return new_player
+		return self
 
 	################################ ACTIONS ##################################
 

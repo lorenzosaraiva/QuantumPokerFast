@@ -29,12 +29,13 @@ class Game():
         for table in self.table_list:
             player = table.get_player(username)
             if player:
-                return player
-        return "Not in table"
+                print("last")
+                return player.serialize()
+        return None
 
     def get_table (self, username):
         for table in self.table_list:
             player = table.get_player(username)
             if player:
                 return table
-        return "Not in table"
+        return None
