@@ -231,24 +231,24 @@ class Table():
 		return response
 
 	def entangle_same_card1 (self, username):
-		player = self.all_players[username]
-		return self.entangle_same_card(player.id, 0)
+		return self.entangle_same_card(username, 0)
 
 	def entangle_same_card2 (self, username):
-		player = self.all_players[username]
-		return self.entangle_same_card(player.id, self.max_qubits)
+		return self.entangle_same_card(username, self.max_qubits)
 
 
-	def entangle_same_card (self, player_id, offset):
+	def entangle_same_card (self, username, offset):
 		
+		player = self.all_players[username]
 
-		basic_checks = self.basic_checks(player_id)
+		basic_checks = self.basic_checks(player.id)
 		if basic_checks != 1:
 			return basic_checks
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
-		player = self.all_players[self.current_player]
+
 		ret = ""
+
 		if offset == 0:
 			next_qubit = player.next_qubit1
 		else:
@@ -264,7 +264,7 @@ class Table():
 		
 		origin = next_qubit - 1
 		player.circuit.append(cirq.CNOT(player.qubits[origin  + offset], player.qubits[next_qubit + offset]))
-		self.quantum_draw(player_id, offset, True)
+		self.quantum_draw(player.id, offset, True)
 
 		#player.entangled.append(['c'+ str('1') + 'q' + str(origin), 'c' + str('1') + 'q' + str(next_qubit)])
 		if offset == 0:
@@ -276,14 +276,15 @@ class Table():
 		ret = "Player " + str(self.current_player) + " has entangled."
 		return ret
 	
-	def entangle_diff_1_2 (self, player_id):
-		if self.finished == 1:
-			return "Hand is over. Click on restart for another hand."
+	def entangle_diff_1_2 (self, username):
+		player = self.all_players[username]
+
+		basic_checks = self.basic_checks(player.id)
+		if basic_checks != 1:
+			return basic_checks
+
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
-		if player_id != self.current_player:
-			return "Not your turn"
-		player = self.all_players[self.current_player]
 		
 		origin = player.next_qubit1 - 1
 		target = player.next_qubit2
@@ -298,21 +299,24 @@ class Table():
 
 		player.diff_ent_index.append([origin, target])
 		player.circuit.append(cirq.CNOT(player.qubits[origin], player.qubits[target + 5]))
-		self.quantum_draw(player_id, 5, True)
+		self.quantum_draw(player.id, 5, True)
 
 		player.diff_ent = 1
 		self.update_player_post_entangle(player)
 		ret = "Player " + str(self.current_player) + " has entangled."
 		return ret
 
-	def entangle_diff_2_1 (self, player_id):
-		if self.finished == 1:
-			return "Hand is over. Click on restart for another hand."
+	def entangle_diff_2_1 (self, username):
+		
+		player = self.all_players[username]
+
+		basic_checks = self.basic_checks(player.id)
+		if basic_checks != 1:
+			return basic_checks
+
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
-		if player_id != self.current_player:
-			return "Not your turn"
-		player = self.all_players[self.current_player]
+
 
 		
 		origin = player.next_qubit2 - 1
@@ -327,7 +331,7 @@ class Table():
 			return ret
 
 		player.circuit.append(cirq.CNOT(player.qubits[origin + self.max_qubits], player.qubits[target]))
-		self.quantum_draw(player_id, 0, True)
+		self.quantum_draw(player.id, 0, True)
 
 		player.diff_ent = 1
 		player.diff_ent_index.append([target, origin])
@@ -358,14 +362,8 @@ class Table():
 		new_table.all_players = []
 		new_table.showdown_players = []
 		for username, player in self.all_players.items():
-			player.table = None
 			new_player = player.serialize()
-			player.table = self
 			new_table.all_players.append(new_player)	
-		
-		#for player in self.showdown_players:
-		#	new_player = player.serialize()
-		#	new_table.showdown_players.append(new_player)	
 
 		return new_table
 	
@@ -436,11 +434,11 @@ class Table():
 
 
 	def get_call_amount (self, player_id):
-		ret = self.to_pay - self.all_players[player_id].current_bet
+		ret = self.to_pay - list(self.all_players.values())[player_id].current_bet
 		return ret
 	
-	def top_up (self, player_id):
-		self.all_players[player_id].stack += 1000
+	def top_up (self, username):
+		self.all_players[username].stack += 1000
 		return "Player got another 1000 chips"
 
 	def set_blinds (self):
@@ -467,8 +465,8 @@ class Table():
 
 			############# 2 PLAYERS ONLY ############
 			if len(self.all_players) == 2:
-				player0 = self.all_players[0]
-				player1 = self.all_players[1]
+				player0 = list(self.all_players.values())[0]
+				player1 = list(self.all_players.values())[1]
 				hand0 = [Card(player0.card1[0].power, player0.card1[0].suit), Card(player0.card2[0].power, player0.card2[0].suit)]
 				hand1 = [Card(player1.card1[0].power, player1.card1[0].suit), Card(player1.card2[0].power, player1.card2[0].suit)]
 				score0 = HandEvaluator.evaluate_hand(hand0, board)

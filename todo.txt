@@ -1,0 +1,7 @@
+- log coletivo
+- log individual
+- pagina carregar direito e não só onclick
+- display da mão quando rola o entangle
+- testar multitable
+- sair e voltar da tela de table
+- botar raise_bet pegar o valor que tá na caixa

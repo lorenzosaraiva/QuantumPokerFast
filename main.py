@@ -72,7 +72,7 @@ async def show_player(current_user: User = Depends(auth.get_current_user)):
 
 @app.get("/table")
 async def show_table(current_user: User = Depends(auth.get_current_user)):
-    return await get_table(lambda table: table, current_user)
+    return await get_table(lambda table: table.serialize(), current_user)
 
 @app.get("/find_table")
 async def find_table(current_user: User = Depends(auth.get_current_user)):

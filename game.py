@@ -29,7 +29,6 @@ class Game():
         for table in self.table_list:
             player = table.get_player(username)
             if player:
-                print("last")
                 return player.serialize()
         return None
 

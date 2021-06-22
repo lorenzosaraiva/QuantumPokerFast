@@ -54,18 +54,18 @@ def test_read_main():
     table = client.get("/table", headers=auth_john)
     assert table.status_code == 200
 
-    # Alice logs in
-    login = client.post("/token", {'username':'alice', 'password':'secret2'})
+    # Bob logs in
+    login = client.post("/token", {'username':'bob', 'password':'secret3'})
     assert login.status_code == 200
     login = login.json()
-    assert login['access_token'] == 'alice'
+    assert login['access_token'] == 'bob'
     assert login['token_type'] == 'bearer'
-    auth_alice = {"Authorization":login['token_type']  + " " + login['access_token']}
-    me = client.get("/users/me", headers=auth_alice)
+    auth_bob = {"Authorization":login['token_type']  + " " + login['access_token']}
+    me = client.get("/users/me", headers=auth_bob)
     assert me.status_code == 200
     me = me.json()
-    assert me['username'] == "alice"
-    assert me['hashed_password'] == "fakehashedsecret2"
+    assert me['username'] == "bob"
+    assert me['hashed_password'] == "fakehashedsecret3"
 
     # Alice player tries to find a table
     find_table = client.get("/find_table", headers=auth_alice)
@@ -74,6 +74,14 @@ def test_read_main():
 
     # They should be both in the same table
     assert len(find_table['all_players']) == 2
+
+    # Bob tries to find a table
+    find_table = client.get("/find_table", headers=auth_bob)
+    assert find_table.status_code == 200
+    find_table = find_table.json()
+
+    # He should be alone in the table
+    assert len(find_table['all_players']) == 1
 
     quantum_draw1 = client.get("/quantum_draw1", headers=auth_alice)
     assert quantum_draw1.status_code == 200
