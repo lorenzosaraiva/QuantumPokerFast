@@ -62,8 +62,8 @@ async def get_table(f, current_user: User = Depends(auth.get_current_user)):
     table = game.get_table(current_user["username"])
     if table:
         return f(table)
-    else:
-        raise HTTPException(status_code=200, detail="Player not in table")
+    #else:
+        #raise HTTPException(status_code=200, detail="Player not in table")
         
 @app.get("/player")
 async def show_player(current_user: User = Depends(auth.get_current_user)):
@@ -95,8 +95,8 @@ async def fold(current_user: User = Depends(auth.get_current_user)):
 #async def raise_bet( amount:int, current_user: User = Depends(auth.get_current_user)):
 
 @app.get("/raise_bet")
-async def raise_bet(current_user: User = Depends(auth.get_current_user)):
-    return await get_table(lambda table: table.raise_bet(current_user["username"]), current_user)
+async def raise_bet(amount:int, current_user: User = Depends(auth.get_current_user)):
+    return await get_table(lambda table: table.raise_bet(current_user["username"], amount), current_user)
 
 @app.get("/quantum_draw1")
 async def quantum_draw1(current_user: User = Depends(auth.get_current_user)):

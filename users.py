@@ -28,6 +28,13 @@ class Users():
                 "hashed_password": "fakehashedsecret3",
                 "disabled": True,
             }, 
+            "carl": {
+                "username": "carl",
+                "full_name": "carl larc",
+                "email": "carl@example.com",
+                "hashed_password": "fakehashedsecret4",
+                "disabled": True,
+            }, 
         }
 
     def get_user(self, username: str):

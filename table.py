@@ -39,6 +39,7 @@ class Table():
 		self.current_player = 0
 		self.side_pots = []
 		self.showdown_players = []
+		self.log = ""
 		
 
 
@@ -50,19 +51,16 @@ class Table():
 		basic_checks = self.basic_checks(player.id)
 		if basic_checks != 1:
 			return basic_checks
-		response = ""
-		print(player.current_bet)
-		print(self.to_pay)
+	
 		if player.current_bet == self.to_pay:  # checa se player já cobriu aposta
 			self.checked_players = self.checked_players + 1
-			response = "Player " + str(self.current_player) + " has checked."
 			if self.checked_players == self.active_players:  # acabou rodada de apostas
-				response = response + self.next_phase()
+				self.next_phase()
 			else:  # não acabou a rodada de apostas, passa pro proximo player
 				self.next_player()
+			self.log = self.log + username + " has checked. \n"
 		else:
-			response = "Player has not yet covered all bets."
-		return response
+			return "You have not yet covered all bets."
 
 	def raise_bet (self, username = -1, amount=1000):
 		if username != -1:
@@ -83,10 +81,11 @@ class Table():
 			self.to_pay = amount + self.to_pay 
 			player.current_bet = self.to_pay
 			player.stack = player.stack - total
-			ret = player.username + " has raised to " + str(self.to_pay)
+			response = player.username + " has raised to " + str(self.to_pay)
+			self.log = self.log + response + "\n"
 
 			i = 0
-			for username, call_player in self.all_players.items():
+			for call_player in self.all_players.values():
 				if call_player.is_folded == 1 or call_player.is_allin == 1:
 					call_player.to_call = 0
 				else:
@@ -100,7 +99,7 @@ class Table():
 				player.is_allin = 1
 
 			self.next_player()	
-			return ret
+			return response
 		else:
 			return "Not enough money"
 
@@ -112,7 +111,6 @@ class Table():
 		if self.to_pay == 0:
 			return "Nothing to call, either check or raise."
 
-		response = username + " "
 		total = self.to_pay - player.current_bet
 		if player.stack > total:
 			self.pot = self.pot + total
@@ -123,11 +121,12 @@ class Table():
 			if self.active_players == 1:
 				self.resolve_all_in()
 			elif self.checked_players == self.active_players:  # acabou rodada de apostas
-				response = response + self.next_phase()
+				self.next_phase()
 			else:
 				self.next_player()
-			response = response + "has called for " + \
-				str(self.to_pay) + " chips."
+			response = username + " has called for " + str(total) + " chips \n"
+			self.log = self.log + response
+			return "You have called for " + str(total) + " chips \n"
 		else:
 			player.is_allin = 1
 			self.pot = self.pot + player.stack
@@ -138,11 +137,14 @@ class Table():
 			if self.active_players == 1:
 				self.resolve_all_in()
 			elif self.checked_players == self.active_players and self.active_players > 1: 
-				response = response + self.next_phase()
+				self.next_phase()
 			else:
 				self.next_player()
-			response = response + "You had not enough chips to cover the bet, so you went all in."
-		return response
+			
+			response = username + " has called for " + str(total) + " chips and is now all in. \n"
+			self.log = self.log + response
+			return "You had not enough chips to cover the bet, so you went all in."
+		
 
 	def fold (self, username):
 		player = self.all_players[username]
@@ -151,6 +153,8 @@ class Table():
 		if basic_checks != 1:
 			return basic_checks
 		player.is_folded = 1
+		response = username + " has folded \n"
+		self.log = self.log + response
 		self.active_players = self.active_players - 1
 		if self.active_players <= 1:
 			if self.players_allin <= 1:
@@ -188,8 +192,7 @@ class Table():
 			self.pot = self.pot + self.quantum_draw_price
 			self.quantum_pot = self.quantum_pot + self.quantum_draw_price
 			player.stack = player.stack - self.quantum_draw_price	
-		#card = "Erro no card"
-		#next_qubit = -1
+	
 		if offset == 0:
 			card = player.card1
 			next_qubit = player.next_qubit1
@@ -227,8 +230,8 @@ class Table():
 			player.card2 = card
 
 		self.update_player_post_entangle(player)
-		response = "Player " + str(self.current_player) + " has quantum drawed."
-		return response
+		self.log = self.log + player.username + " has quantum drawed. \n"
+		return ""
 
 	def entangle_same_card1 (self, username):
 		return self.entangle_same_card(username, 0)
@@ -247,20 +250,16 @@ class Table():
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
 
-		ret = ""
-
 		if offset == 0:
 			next_qubit = player.next_qubit1
 		else:
 			next_qubit = player.next_qubit2
 
 		if next_qubit == 0: # Tentou fazer o entangle de um card sem qubit ativado
-			ret = "You don't have any active qubits in this card! Quantum draw first."
-			return ret
+			return "You don't have any active qubits in this card! Quantum draw first."
 
 		if next_qubit >= 5:
-			ret = "All qubits already used."
-			return ret
+			return "All qubits already used."
 		
 		origin = next_qubit - 1
 		player.circuit.append(cirq.CNOT(player.qubits[origin  + offset], player.qubits[next_qubit + offset]))
@@ -273,8 +272,8 @@ class Table():
 			player.entangled2.append([origin, next_qubit])
 
 		self.update_player_post_entangle(player)
-		ret = "Player " + str(self.current_player) + " has entangled."
-		return ret
+		self.log = self.log + player.username + " has entangled. \n"
+		return ""
 	
 	def entangle_diff_1_2 (self, username):
 		player = self.all_players[username]
@@ -290,12 +289,10 @@ class Table():
 		target = player.next_qubit2
 
 		if origin < 0: # Tentou fazer o entangle de um card sem qubit ativado
-			ret = "You don't have any active qubits in the origin card! Quantum draw first."
-			return ret
+			return "You don't have any active qubits in the origin card! Quantum draw first."
 
 		if target >= 5:
-			ret = "All qubits already used."
-			return ret
+			return "All qubits already used."
 
 		player.diff_ent_index.append([origin, target])
 		player.circuit.append(cirq.CNOT(player.qubits[origin], player.qubits[target + 5]))
@@ -303,8 +300,8 @@ class Table():
 
 		player.diff_ent = 1
 		self.update_player_post_entangle(player)
-		ret = "Player " + str(self.current_player) + " has entangled."
-		return ret
+		self.log = self.log + player.username + " has entangled. \n"
+		return ""
 
 	def entangle_diff_2_1 (self, username):
 		
@@ -439,7 +436,8 @@ class Table():
 	
 	def top_up (self, username):
 		self.all_players[username].stack += 1000
-		return "Player got another 1000 chips"
+		self.log = self.log + username + " got another 1000 chips. \n"
+		return ""
 
 	def set_blinds (self):
 		small = self.get_next_player_index(self.dealer)
@@ -450,16 +448,17 @@ class Table():
 
 	def finish_hand (self):
 		if self.active_players + self.players_allin <= 1:
-			for username, player in self.all_players.items():
+			for player in self.all_players.values():
 				if player.is_folded == 0:
 					winner = player
 					winner.stack = winner.stack + self.pot
 					self.finished = 1
-					return "Player " + str(winner.id) + " won " + str(self.pot) + "chips. Click on restart for another hand."				
+					self.log = self.log + winner.username + " won " + str(self.pot) + " chips. \n Click on restart for another hand. \n"
+					return				
 		else:
 			self.compute_players()
 			board = [Card(self.flop1.power, self.flop1.suit), Card(self.flop2.power, self.flop2.suit) , Card(self.flop3.power, self.flop3.suit), Card(self.turn.power, self.turn.suit), Card(self.river.power, self.river.suit)]
-			for username, player in self.all_players.items():
+			for player in self.all_players.values():
 				if player.is_folded == 0:
 					self.showdown_players.append(player)
 
@@ -471,7 +470,8 @@ class Table():
 				hand1 = [Card(player1.card1[0].power, player1.card1[0].suit), Card(player1.card2[0].power, player1.card2[0].suit)]
 				score0 = HandEvaluator.evaluate_hand(hand0, board)
 				score1 = HandEvaluator.evaluate_hand(hand1, board)
-				
+				print(score0)
+				print(score1)
 				if score0 != score1:
 					if score0 > score1:
 						winner = player0
@@ -489,7 +489,7 @@ class Table():
 						winner.stack = winner.stack + winner.total_bet
 						loser.stack = loser.stack + loser.total_bet - winner.total_bet
 					chips_won = winner.stack - before_stack
-					ret = "Player " + str(self.current_player) + " won " + str(chips_won) + " chips."
+					ret = winner.username + " won " + str(chips_won) + " chips."
 				else:
 					player0.stack = player0.stack + player0.total_bet + (self.quantum_pot/2)
 					player1.stack = player1.stack + player1.total_bet + (self.quantum_pot/2)
@@ -497,7 +497,8 @@ class Table():
 
 
 				self.finished = 1
-				return ret + "Click on restart for another hand."
+				self.log = self.log + ret + " \n Click on restart for another hand. \n"
+				return
 
 			################ 2 PLAYERS ONLY END #################
 
@@ -583,9 +584,8 @@ class Table():
 		return deck
 
 	def next_player (self):
-		#print("called next player ")
 		no_actives = 1
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
 			if player.is_allin == 0 and player.is_folded == 0:
 				no_actives = 0
 		if no_actives:
@@ -617,7 +617,7 @@ class Table():
 			return "Hand is not over yet!"
 
 		actives = 0
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
 			if player.stack > 0:
 				actives = actives + 1
 				
@@ -635,17 +635,18 @@ class Table():
 		self.to_pay = 0
 		self.cards = []
 		self.deck = self.build_deck()
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
 			player.reset_player(self.draw_card(), self.draw_card(), cirq.LineQubit.range(self.max_qubits * 2), cirq.Circuit())
 		self.dealer = self.get_next_player_index(self.dealer)
 		self.current_player = self.get_next_player_index(self.dealer)
 		self.quantum_action_used = 0 
 		self.set_blinds()
 		self.showdown_players = []
+		self.log = self.log + "New hand! \n"
 		return "New hand!"
 
 	def measure_players (self):
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
 			if player.is_folded == 1:
 				continue
 			for i in range(player.next_qubit1):
@@ -691,10 +692,7 @@ class Table():
 
 
 	def get_active_player (self):
-		print("GET ACTIVE")
-		print(self.current_player)
-		for username, player in self.all_players.items():
-			print(player.id)
+		for player in self.all_players.values():
 			if player.id == self.current_player:
 				return player
 
@@ -706,7 +704,7 @@ class Table():
 		self.to_pay = 0
 		self.checked_players = 0
 		self.current_player = self.dealer
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
 			if player.id == self.dealer:
 				first_player = player
 
@@ -715,7 +713,7 @@ class Table():
 
 		self.quantum_action_used = 0
 
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
 			player.total_bet = player.total_bet + player.current_bet
 			player.current_bet = 0
 
@@ -739,6 +737,4 @@ class Table():
 		if self.phase == 4:
 			self.showdown = 1
 			return self.finish_hand()
-
-		return ""
 

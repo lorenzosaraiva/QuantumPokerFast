@@ -1,7 +1,7 @@
-- log coletivo
-- log individual
-- pagina carregar direito e não só onclick
-- display da mão quando rola o entangle
-- testar multitable
+- log coletivo - okish
+- log individual - OK
+- pagina carregar direito e não só onclick - OK
+- display da mão quando rola o entangle - 
+- testar multitable - OK
 - sair e voltar da tela de table
-- botar raise_bet pegar o valor que tá na caixa
+- botar raise_bet pegar o valor que tá na caixa - OK

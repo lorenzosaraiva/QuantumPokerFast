@@ -55,7 +55,6 @@ class Player():
 		new_player = copy.deepcopy(self)
 		new_player.circuit = []
 		new_player.qubits = []
-		print("last")
 		return new_player
 
 	################################ ACTIONS ##################################
