@@ -35,8 +35,10 @@ class Table():
 		self.big_blind = 20 
 		self.quantum_draw_price = 3 * self.big_blind
 		self.dealer = 0
+		self.dealer_username = ""
 		self.players_allin = 0
 		self.current_player = 0
+		self.current_username = 0 
 		self.side_pots = []
 		self.showdown_players = []
 		self.log = ""
@@ -320,12 +322,10 @@ class Table():
 		target = player.next_qubit1
 
 		if origin < 0: # Tentou fazer o entangle de um card sem qubit ativado
-			ret = "You don't have any active qubits in the origin card! Quantum draw first."
-			return ret
+			return "You don't have any active qubits in the origin card! Quantum draw first."
 
-		if target >= 5:
-			ret = "All qubits already used."
-			return ret
+		if target >= 5: 
+			return "All qubits already used."
 
 		player.circuit.append(cirq.CNOT(player.qubits[origin + self.max_qubits], player.qubits[target]))
 		self.quantum_draw(player.id, 0, True)
@@ -333,8 +333,8 @@ class Table():
 		player.diff_ent = 1
 		player.diff_ent_index.append([target, origin])
 		self.update_player_post_entangle(player)
-		ret = "Player " + str(self.current_player) + " has entangled."
-		return ret
+		self.log = self.log + player.username + " has entangled. \n"
+		return ""
 
 	################### PLAYER ACTIONS END #####################
 
@@ -447,8 +447,10 @@ class Table():
 		self.checked_players = 0
 
 	def finish_hand (self):
+    	
 		if self.active_players + self.players_allin <= 1:
 			for player in self.all_players.values():
+				player.unset_ent()
 				if player.is_folded == 0:
 					winner = player
 					winner.stack = winner.stack + self.pot
@@ -470,8 +472,6 @@ class Table():
 				hand1 = [Card(player1.card1[0].power, player1.card1[0].suit), Card(player1.card2[0].power, player1.card2[0].suit)]
 				score0 = HandEvaluator.evaluate_hand(hand0, board)
 				score1 = HandEvaluator.evaluate_hand(hand1, board)
-				print(score0)
-				print(score1)
 				if score0 != score1:
 					if score0 > score1:
 						winner = player0
@@ -494,10 +494,12 @@ class Table():
 					player0.stack = player0.stack + player0.total_bet + (self.quantum_pot/2)
 					player1.stack = player1.stack + player1.total_bet + (self.quantum_pot/2)
 					ret = "Hand was a tie. Pot split." 
-
+				
+				ret = ret + "\n" + winner.username + " won with " + winner.card1[0].name + " and " + winner.card2[0].name
+				ret = ret + "\n" + loser.username + " lost with " + loser.card1[0].name + " and " + loser.card2[0].name
 
 				self.finished = 1
-				self.log = self.log + ret + " \n Click on restart for another hand. \n"
+				self.log = self.log + ret + "\nClick on restart for another hand. \n"
 				return
 
 			################ 2 PLAYERS ONLY END #################
@@ -664,7 +666,8 @@ class Table():
 		
 		self.measure_players()
 		simulator = cirq.Simulator()
-		for username, player in self.all_players.items():
+		for player in self.all_players.values():
+			player.unset_ent()
 			if player.is_folded == 1:
 				continue
 			result = ''
@@ -685,9 +688,11 @@ class Table():
 
 			if len(player.card1) > 1:
 				player.card1 = [player.card1.pop(int(bits1, 2))]
+				player.card1_active = player.card1
 
 			if len(player.card2) > 1:
 				player.card2 = [player.card2.pop(int(bits2, 2))]
+				player.card2_active = player.card2
 			
 
 

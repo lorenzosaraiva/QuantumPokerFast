@@ -50,6 +50,9 @@ class Player():
 		else:
 			self.is_folded = 0
 
+	def unset_ent(self):
+    		self.diff_ent = 0
+
 
 	def serialize(self):
 		new_player = copy.deepcopy(self)
