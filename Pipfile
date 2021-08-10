@@ -7,11 +7,13 @@ verify_ssl = true
 
 [packages]
 aiofiles = "*"
-pokereval = "*"
+pokereval = "==0.2.0"
 pipreqs = "*"
-uvicorn = {extras = ["stable"],version = "*"}
-fastapi = "*"
-python-multipart = "*"
+uvicorn = "==0.13.4"
+fastapi = "==0.64.0"
+python-multipart = "==0.0.5"
+numpy = "==1.19.5"
+cirq = "==0.11.0"
 
 [requires]
 python_version = "3.6"
