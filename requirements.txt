@@ -1,4 +1,4 @@
-numpy==1.19.5
+numpy==1.21.1
 cirq==0.11.0
 pokereval==0.2.0
 fastapi==0.64.0
