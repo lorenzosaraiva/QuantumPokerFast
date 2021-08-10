@@ -20,6 +20,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "https://quantum-poker.herokuapp.com/"
 ]
 
 app.add_middleware(
