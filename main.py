@@ -20,7 +20,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
-    "https://quantum-poker.herokuapp.com/"
+    "https://quantum-poker-react.vercel.app"
 ]
 
 app.add_middleware(
