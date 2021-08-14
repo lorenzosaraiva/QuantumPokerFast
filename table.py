@@ -287,6 +287,9 @@ class Table():
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
 		
+		if player.diff_ent == 1:
+			return "Can't entangle different cards more than once. At least until the next update."
+		
 		origin = player.next_qubit1 - 1
 		target = player.next_qubit2
 
@@ -310,9 +313,12 @@ class Table():
 		player = self.all_players[username]
 
 		basic_checks = self.basic_checks(player.id)
+
 		if basic_checks != 1:
 			return basic_checks
 
+		if player.diff_ent == 1:
+			return "Can't entangle different cards more than once. At least until the next update."
 		if self.quantum_action_used == 1:
 			return "Quantum Action already used this turn."
 
@@ -374,7 +380,7 @@ class Table():
 		return new_player
 
 	def update_player_post_entangle (self, player):
-		#self.quantum_action_used = 1
+		self.quantum_action_used = 1
 
 		to_remove = []
 		for i in range(len(player.card1)):
