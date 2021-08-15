@@ -715,8 +715,9 @@ class Table():
 		self.to_pay = 0
 		self.checked_players = 0
 		self.current_player = self.dealer
+		self.next_player()
 		for player in self.all_players.values():
-			if player.id == self.dealer:
+			if player.id == self.current_player:
 				first_player = player
 
 		if (first_player.is_allin == 1 or first_player.is_folded == 1) and self.active_players > 1:
