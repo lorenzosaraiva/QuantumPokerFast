@@ -4,3 +4,6 @@ class _Card():
 		self.binary_position = 0
 		self.power = power
 		self.suit = suit
+
+
+# CLEAR CACHE
